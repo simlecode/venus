@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/go-filecoin/internal/pkg/block"
+	"github.com/filecoin-project/venus/internal/pkg/block"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/connmgr"
 	"github.com/libp2p/go-libp2p-core/event"
@@ -92,12 +92,11 @@ type fakeStream struct {
 
 var _ inet.Stream = &fakeStream{}
 
-
 func newFakeStream() fakeStream { return fakeStream{} }
 
 // Minimal implementation of the inet.Stream interface
 
-func (fs fakeStream) ID() string                         { return ""}
+func (fs fakeStream) ID() string                         { return "" }
 func (fs fakeStream) Protocol() protocol.ID              { return fs.pid }            // nolint: golint
 func (fs fakeStream) SetProtocol(id protocol.ID)         { fs.pid = id }              // nolint: golint
 func (fs fakeStream) Stat() inet.Stat                    { panic("not implemented") } // nolint: golint

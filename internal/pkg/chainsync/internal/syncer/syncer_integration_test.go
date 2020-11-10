@@ -10,16 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/filecoin-project/go-filecoin/internal/pkg/block"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/cborutil"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/chain"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/chainsync/internal/syncer"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/chainsync/status"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/clock"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/repo"
-	th "github.com/filecoin-project/go-filecoin/internal/pkg/testhelpers"
-	tf "github.com/filecoin-project/go-filecoin/internal/pkg/testhelpers/testflags"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/types"
+	"github.com/filecoin-project/venus/internal/pkg/block"
+	"github.com/filecoin-project/venus/internal/pkg/cborutil"
+	"github.com/filecoin-project/venus/internal/pkg/chain"
+	"github.com/filecoin-project/venus/internal/pkg/chainsync/internal/syncer"
+	"github.com/filecoin-project/venus/internal/pkg/chainsync/status"
+	"github.com/filecoin-project/venus/internal/pkg/clock"
+	"github.com/filecoin-project/venus/internal/pkg/repo"
+	th "github.com/filecoin-project/venus/internal/pkg/testhelpers"
+	tf "github.com/filecoin-project/venus/internal/pkg/testhelpers/testflags"
+	"github.com/filecoin-project/venus/internal/pkg/types"
 )
 
 // Syncer is capable of recovering from a fork reorg after the bsstore is loaded.

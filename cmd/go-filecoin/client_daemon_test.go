@@ -6,13 +6,13 @@ import (
 
 	"github.com/filecoin-project/go-state-types/abi"
 
-	"github.com/filecoin-project/go-filecoin/internal/pkg/types"
+	"github.com/filecoin-project/venus/internal/pkg/types"
 
-	"github.com/filecoin-project/go-filecoin/internal/app/go-filecoin/node/test"
+	"github.com/filecoin-project/venus/internal/app/go-filecoin/node/test"
 
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
-	"github.com/filecoin-project/go-filecoin/fixtures/fortest"
-	tf "github.com/filecoin-project/go-filecoin/internal/pkg/testhelpers/testflags"
+	"github.com/filecoin-project/venus/fixtures/fortest"
+	tf "github.com/filecoin-project/venus/internal/pkg/testhelpers/testflags"
 	"github.com/stretchr/testify/assert"
 )
 

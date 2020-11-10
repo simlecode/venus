@@ -10,14 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	bls "github.com/filecoin-project/filecoin-ffi"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/block"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/consensus"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/crypto"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/enccid"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/encoding"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/types"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/vm"
-	"github.com/filecoin-project/go-filecoin/internal/pkg/vm/state"
+	"github.com/filecoin-project/venus/internal/pkg/block"
+	"github.com/filecoin-project/venus/internal/pkg/consensus"
+	"github.com/filecoin-project/venus/internal/pkg/crypto"
+	"github.com/filecoin-project/venus/internal/pkg/enccid"
+	"github.com/filecoin-project/venus/internal/pkg/encoding"
+	"github.com/filecoin-project/venus/internal/pkg/types"
+	"github.com/filecoin-project/venus/internal/pkg/vm"
+	"github.com/filecoin-project/venus/internal/pkg/vm/state"
 )
 
 // RequireSignedTestBlockFromTipSet creates a block with a valid signature by
