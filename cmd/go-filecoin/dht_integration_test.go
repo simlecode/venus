@@ -33,8 +33,3 @@ func TestDhtFindPeer(t *testing.T) {
 
 	assert.Contains(t, findpeerOutput, n2Addr.String())
 }
-
-// TODO: findprovs will have to be untested until
-//  https://github.com/filecoin-project/venus/issues/2357
-//  original tests were flaky; testing may need to be omitted entirely
-//  unless it can consistently pass.
