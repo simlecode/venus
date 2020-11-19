@@ -117,5 +117,6 @@ func ImportChain(r repo.Repo, fname string) error {
 		return xerrors.Errorf("importing chain failed: %s", err)
 	}
 	logImport.Infof("accepting %s as new head", tip.Key().String())
-	return chainStore.SetHead(context.Background(), tip)
+
+	return err
 }

@@ -605,7 +605,7 @@ func (store *Store) Import(r io.Reader) (*block.TipSet, error) {
 
 	parent := root.EnsureParents()
 
-	log.Info("import height: ", root.EnsureHeight(), " root: ", root.At(0).StateRoot.Cid)
+	log.Info("import height: ", root.EnsureHeight(), " root: ", root.At(0).StateRoot.Cid, " parents: ", root.At(0).Parents)
 	parentTipset, err := store.GetTipSet(parent)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to load root tipset from chainfile: %w", err)

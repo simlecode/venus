@@ -107,14 +107,8 @@ func (c *ChainSelector) IsHeavier(ctx context.Context, a, b *block.TipSet) (bool
 	}
 
 	// To break ties compare the min tickets.
-	aTicket, err := a.MinTicket()
-	if err != nil {
-		return false, err
-	}
-	bTicket, err := b.MinTicket()
-	if err != nil {
-		return false, err
-	}
+	aTicket := a.MinTicket()
+	bTicket := b.MinTicket()
 
 	cmp := bytes.Compare(bTicket.VRFProof, aTicket.VRFProof)
 	if cmp != 0 {

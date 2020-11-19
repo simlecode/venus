@@ -124,7 +124,7 @@ func (d *Dispatcher) enqueue(ci *block.ChainInfo) error {
 func (d *Dispatcher) Start(syncingCtx context.Context) {
 	go func() {
 		defer func() {
-			log.Errorf("exiting")
+			log.Error("exiting")
 			if r := recover(); r != nil {
 				log.Errorf("panic: %v", r)
 				debug.PrintStack()
@@ -136,7 +136,7 @@ func (d *Dispatcher) Start(syncingCtx context.Context) {
 			// Handle shutdown
 			select {
 			case <-syncingCtx.Done():
-				log.Infof("context done")
+				log.Info("context done")
 				return
 			default:
 			}

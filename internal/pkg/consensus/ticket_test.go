@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	fbig "github.com/filecoin-project/go-state-types/big"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +22,8 @@ import (
 func TestGenValidTicketChain(t *testing.T) {
 	tf.UnitTest(t)
 	ctx := context.Background()
-	head := block.NewTipSetKey() // Tipset key is unused by fake randomness
+	head, _ := block.NewTipSet(mockBlock()) // Tipset key is unused by fake randomness
+	loader := newMockTipsetLoader(head)
 
 	// Interleave 3 signers
 	kis := types.MustGenerateBLSKeyInfo(3, 0)
@@ -39,11 +42,11 @@ func TestGenValidTicketChain(t *testing.T) {
 	}
 
 	rnd := consensus.FakeSampler{Seed: 0}
-	tm := consensus.NewTicketMachine(&rnd)
+	tm := consensus.NewTicketMachine(&rnd, loader)
 
 	// Grow the specified ticket chain without error
 	for i := 0; i < len(schedule.Addrs); i++ {
-		requireValidTicket(ctx, t, tm, head, abi.ChainEpoch(i), miner, schedule.Addrs[i], signer)
+		requireValidTicket(ctx, t, tm, head.Key(), abi.ChainEpoch(i), miner, schedule.Addrs[i], signer)
 	}
 }
 
@@ -60,17 +63,18 @@ func requireValidTicket(ctx context.Context, t *testing.T, tm *consensus.TicketM
 
 func TestNextTicketFailsWithInvalidSigner(t *testing.T) {
 	ctx := context.Background()
-	head := block.NewTipSetKey() // Tipset key is unused by fake randomness
+	head, _ := block.NewTipSet(mockBlock()) // Tipset key is unused by fake randomness
+	loader := newMockTipsetLoader(head)
 	miner, err := address.NewIDAddress(uint64(1))
 	require.NoError(t, err)
 
 	signer, _ := types.NewMockSignersAndKeyInfo(1)
 	badAddr := types.RequireIDAddress(t, 100)
 	rnd := consensus.FakeSampler{Seed: 0}
-	tm := consensus.NewTicketMachine(&rnd)
+	tm := consensus.NewTicketMachine(&rnd, loader)
 	electionEntry := &block.BeaconEntry{}
 	newPeriod := false
-	badTicket, err := tm.MakeTicket(ctx, head, abi.ChainEpoch(1), miner, electionEntry, newPeriod, badAddr, signer)
+	badTicket, err := tm.MakeTicket(ctx, head.Key(), abi.ChainEpoch(1), miner, electionEntry, newPeriod, badAddr, signer)
 	assert.Error(t, err)
 	assert.Nil(t, badTicket.VRFProof)
 }
@@ -79,4 +83,38 @@ func requireAddress(t *testing.T, ki *crypto.KeyInfo) address.Address {
 	addr, err := ki.Address()
 	require.NoError(t, err)
 	return addr
+}
+
+func mockBlock() *block.Block {
+	return &block.Block{
+		Ticket:        block.Ticket{VRFProof: []byte{0x01, 0x02, 0x03}},
+		ElectionProof: &crypto.ElectionProof{VRFProof: []byte{0x0a, 0x0b}},
+		BeaconEntries: []*block.BeaconEntry{
+			{
+				Round: 5,
+				Data:  []byte{0x0c},
+			},
+		},
+		Height:        2,
+		ParentWeight:  fbig.NewInt(1000),
+		ForkSignaling: 3,
+		Timestamp:     1,
+		ParentBaseFee: abi.NewTokenAmount(10),
+		BlockSig: &crypto.Signature{
+			Type: crypto.SigTypeBLS,
+			Data: []byte{0x3},
+		},
+	}
+}
+
+type mockTipsetLoader struct {
+	tsk *block.TipSet
+}
+
+func newMockTipsetLoader(tsk *block.TipSet) *mockTipsetLoader {
+	return &mockTipsetLoader{tsk: tsk}
+}
+
+func (m *mockTipsetLoader) GetTipSet(tsk block.TipSetKey) (*block.TipSet, error) {
+	return m.tsk, nil
 }

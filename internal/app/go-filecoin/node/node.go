@@ -139,7 +139,7 @@ func (node *Node) pubsubscribe(ctx context.Context, topic *pubsub.Topic, handler
 
 func (node *Node) handleNewChainHeads(ctx context.Context, firstHead *block.TipSet) {
 	newHeadCh := node.chain.ChainReader.HeadEvents().Sub(chain.NewHeadTopic)
-	defer log.Infof("new head handler exited")
+	defer log.Info("new head handler exited")
 	defer node.chain.ChainReader.HeadEvents().Unsub(newHeadCh)
 
 	handler := message.NewHeadHandler(node.Messaging.Inbox, node.Messaging.Outbox, node.chain.ChainReader, firstHead)
@@ -149,16 +149,16 @@ func (node *Node) handleNewChainHeads(ctx context.Context, firstHead *block.TipS
 		select {
 		case ts, ok := <-newHeadCh:
 			if !ok {
-				log.Errorf("failed new head channel receive")
+				log.Error("failed new head channel receive")
 				return
 			}
 			newHead, ok := ts.(*block.TipSet)
 			if !ok {
-				log.Errorf("non-tipset published on heaviest tipset channel")
+				log.Error("non-tipset published on heaviest tipset channel")
 				continue
 			}
 
-			log.Debugf("message pool handling new head")
+			log.Debug("message pool handling new head")
 			if err := handler.HandleNewHead(ctx, newHead); err != nil {
 				log.Error(err)
 			}

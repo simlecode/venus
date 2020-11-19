@@ -92,7 +92,7 @@ func NewSyncerSubmodule(ctx context.Context,
 	// set up consensus
 	//	elections := consensus.NewElectionMachine(chn.state)
 	sampler := chain.NewSampler(chn.ChainReader, genBlk.Ticket)
-	tickets := consensus.NewTicketMachine(sampler)
+	tickets := consensus.NewTicketMachine(sampler, chn.ChainReader)
 	stateViewer := consensus.AsDefaultStateViewer(state.NewViewer(blockstore.CborStore))
 
 	nodeConsensus := consensus.NewExpected(blockstore.CborStore, blockstore.Blockstore, chn.Processor, &stateViewer,

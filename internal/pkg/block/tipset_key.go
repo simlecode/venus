@@ -42,21 +42,6 @@ func NewTipSetKey(ids ...cid.Cid) TipSetKey {
 }
 
 // NewTipSetKeyFromUnique initialises a set with CIDs that are expected to be unique.
-func NewTipSetKeyFromString(keyStr string) (TipSetKey, error) {
-	keyStr = strings.Trim(keyStr, "{}")
-	cidsStr := strings.Split(keyStr, ",")
-	cids := make([]enccid.Cid, len(cidsStr))
-	for i, cidStr := range cidsStr {
-		id, err := cid.Decode(cidStr)
-		if err != nil {
-			return UndefTipSet.key, err
-		}
-		cids[i] = enccid.NewCid(id)
-	}
-	return TipSetKey{cids}, nil
-}
-
-// NewTipSetKeyFromUnique initialises a set with CIDs that are expected to be unique.
 func NewTipSetKeyFromUnique(ids ...cid.Cid) (TipSetKey, error) {
 	s := NewTipSetKey(ids...)
 	if s.Len() != len(AsSet(ids)) {
@@ -135,6 +120,24 @@ func (s TipSetKey) String() string {
 		out = fmt.Sprintf("%s %s", out, it.Value().String())
 	}
 	return out + " }"
+}
+
+// NewTipSetKeyFromUnique initialises a set with CIDs that are expected to be unique.
+func NewTipSetKeyFromString(keyStr string) (TipSetKey, error) {
+	keyStr = strings.Trim(keyStr, "{}")
+	cidsStr := strings.Split(keyStr, " ")
+	cids := make([]enccid.Cid, 0, len(cidsStr))
+	for _, cidStr := range cidsStr {
+		cidStr = strings.Trim(cidStr, " ")
+		if cidStr != "" {
+			id, err := cid.Decode(cidStr)
+			if err != nil {
+				return UndefTipSet.key, err
+			}
+			cids = append(cids, enccid.NewCid(id))
+		}
+	}
+	return TipSetKey{cids}, nil
 }
 
 // MarshalJSON serializes the key to JSON.

@@ -119,11 +119,17 @@ func (ts *TipSet) ToSlice() []*Block {
 }
 
 // MinTicket returns the smallest ticket of all blocks in the tipset.
-func (ts *TipSet) MinTicket() (Ticket, error) {
-	if len(ts.blocks) == 0 {
-		return Ticket{}, errUndefTipSet
+func (ts *TipSet) MinTicket() Ticket {
+	blks := ts.Blocks()
+
+	min := blks[0]
+
+	for _, b := range blks[1:] {
+		if b.Ticket.Less(&min.Ticket) {
+			min = b
+		}
 	}
-	return ts.blocks[0].Ticket, nil
+	return min.Ticket
 }
 
 // Height returns the height of a tipset.

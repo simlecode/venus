@@ -20,14 +20,19 @@ type ChainSampler interface {
 	SampleTicket(ctx context.Context, head block.TipSetKey, epoch abi.ChainEpoch) (block.Ticket, error)
 }
 
+type tipsetLoader interface {
+	GetTipSet(block.TipSetKey) (*block.TipSet, error)
+}
+
 // TicketMachine uses a VRF and VDF to generate deterministic, unpredictable
 // and time delayed tickets and validates these tickets.
 type TicketMachine struct {
-	sampler ChainSampler
+	sampler      ChainSampler
+	tipsetLoader tipsetLoader
 }
 
-func NewTicketMachine(sampler ChainSampler) *TicketMachine {
-	return &TicketMachine{sampler: sampler}
+func NewTicketMachine(sampler ChainSampler, tipsetLoader tipsetLoader) *TicketMachine {
+	return &TicketMachine{sampler: sampler, tipsetLoader: tipsetLoader}
 }
 
 // MakeTicket creates a new ticket from a chain and target epoch by running a verifiable
@@ -69,11 +74,11 @@ func (tm TicketMachine) ticketVRFRandomness(ctx context.Context, base block.TipS
 	}
 
 	if bSmokeHeight { // todo
-		ticket, err := tm.sampler.SampleTicket(ctx, base, epoch)
+		ts, err := tm.tipsetLoader.GetTipSet(base)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to sample previous ticket")
+			return nil, err
 		}
-		_, err = entropyBuf.Write(ticket.VRFProof)
+		_, err = entropyBuf.Write(ts.MinTicket().VRFProof)
 		if err != nil {
 			return nil, err
 		}

@@ -68,10 +68,7 @@ func (s *Sampler) SampleTicket(ctx context.Context, head block.TipSetKey, epoch 
 		if err != nil {
 			return block.Ticket{}, err
 		}
-		ticket, err = tip.MinTicket()
-		if err != nil {
-			return block.Ticket{}, err
-		}
+		ticket = tip.MinTicket()
 	} else {
 		// Sampling for the genesis state or genesis tipset.
 		ticket = s.genesisTicket

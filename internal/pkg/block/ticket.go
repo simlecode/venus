@@ -30,6 +30,10 @@ func (t *Ticket) Compare(o *Ticket) int {
 	return bytes.Compare(tDigest[:], oDigest[:])
 }
 
+func (t *Ticket) Less(o *Ticket) bool {
+	return t.Compare(o) < 0
+}
+
 func (t *Ticket) Quality() float64 {
 	ticketHash := blake2b.Sum256(t.VRFProof)
 	ticketNum := crypto.BigFromBytes(ticketHash[:]).Int
