@@ -13,18 +13,19 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	acrypto "github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/network"
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/hashicorp/go-multierror"
 	"github.com/ipfs/go-cid"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	cbor "github.com/ipfs/go-ipld-cbor"
+	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 
-	acrypto "github.com/filecoin-project/go-state-types/crypto"
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/venus/pkg/beacon"
 	"github.com/filecoin-project/venus/pkg/block"
 	"github.com/filecoin-project/venus/pkg/chain"
@@ -58,6 +59,8 @@ var (
 	// ErrReceiptRootMismatch is returned when the block's receipt root doesn't match the receipt root computed for the parent tipset.
 	ErrReceiptRootMismatch = errors.New("blocks receipt root does not match parent tip set")
 )
+
+var logExpect = logging.Logger("consensus")
 
 const AllowableClockDriftSecs = uint64(1)
 
@@ -283,8 +286,7 @@ func (c *Expected) validateBlock(ctx context.Context,
 
 	validationStart := time.Now()
 	defer func() {
-		fmt.Println("block validation took", time.Since(validationStart), "height", blk.Height, "age", time.Since(time.Unix(int64(blk.Timestamp), 0)))
-		log.Infow("block validation", "took", time.Since(validationStart), "height", blk.Height, "age", time.Since(time.Unix(int64(blk.Timestamp), 0)))
+		logExpect.Infow("block validation", "took", time.Since(validationStart), "height", blk.Height, "age", time.Since(time.Unix(int64(blk.Timestamp), 0)))
 	}()
 
 	// fast checks first
@@ -408,8 +410,9 @@ func (c *Expected) validateBlock(ctx context.Context,
 		return nil
 	})
 
+	winPoStNv := c.fork.GetNtwkVersion(ctx, baseHeight)
 	wproofCheck := async.Err(func() error {
-		if err := c.VerifyWinningPoStProof(ctx, blk, prevBeacon, lbStateRoot); err != nil {
+		if err := c.VerifyWinningPoStProof(ctx, winPoStNv, blk, prevBeacon, lbStateRoot); err != nil {
 			return xerrors.Errorf("invalid election post: %v", err)
 		}
 		return nil
@@ -507,7 +510,7 @@ func (c *Expected) checkBlockMessages(ctx context.Context, sigValidator *appstat
 
 		// Phase 1: syntactic validation, as defined in the spec
 		minGas := pl.OnChainMessage(msg.ChainLength())
-		if err := m.ValidForBlockInclusion(minGas.Total()); err != nil {
+		if err := m.ValidForBlockInclusion(minGas.Total(), c.fork.GetNtwkVersion(ctx, blk.Height)); err != nil {
 			return err
 		}
 
@@ -588,7 +591,7 @@ func (c *Expected) checkBlockMessages(ctx context.Context, sigValidator *appstat
 	return nil
 }
 
-func (c *Expected) VerifyWinningPoStProof(ctx context.Context, blk *block.Block, prevBeacon *block.BeaconEntry, lbst cid.Cid) error {
+func (c *Expected) VerifyWinningPoStProof(ctx context.Context, nv network.Version, blk *block.Block, prevBeacon *block.BeaconEntry, lbst cid.Cid) error {
 	if constants.InsecurePoStValidation {
 		if len(blk.WinPoStProof) == 0 {
 			return xerrors.Errorf("[INSECURE-POST-VALIDATION] No winning post proof given")
@@ -625,7 +628,7 @@ func (c *Expected) VerifyWinningPoStProof(ctx context.Context, blk *block.Block,
 		return xerrors.New("power state view is null")
 	}
 
-	sectors, err := view.GetSectorsForWinningPoSt(ctx, c.proofVerifier, lbst, blk.Miner, rand)
+	sectors, err := view.GetSectorsForWinningPoSt(ctx, nv, c.proofVerifier, lbst, blk.Miner, rand)
 	if err != nil {
 		return xerrors.Errorf("getting winning post sector set: %v", err)
 	}
