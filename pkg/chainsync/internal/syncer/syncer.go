@@ -193,7 +193,6 @@ func NewSyncer(fv FullBlockValidator,
 	sr status.Reporter,
 	c clock.Clock,
 	fd faultDetector,
-	checkPoint block.TipSetKey,
 	fork fork.IFork) (*Syncer, error) {
 	return &Syncer{
 		fetcher:        f,
@@ -211,7 +210,6 @@ func NewSyncer(fv FullBlockValidator,
 		faultDetector:   fd,
 		reporter:        sr,
 		fork:            fork,
-		checkPoint:      checkPoint,
 	}, nil
 }
 
