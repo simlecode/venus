@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/filecoin-project/venus/pkg/config"
 	"os"
 	"strings"
 	"time"
@@ -130,6 +131,7 @@ type Expected struct {
 	clock                       clock.ChainEpochClock
 	drand                       beacon.Schedule
 	fork                        fork.IFork
+	config                      *config.NetworkParamsConfig
 	circulatingSupplyCalculator *CirculatingSupplyCalculator
 }
 
@@ -150,6 +152,7 @@ func NewExpected(cs cbor.IpldStore,
 	rnd Randness,
 	messageStore *chain.MessageStore,
 	fork fork.IFork,
+	config *config.NetworkParamsConfig,
 ) *Expected {
 	c := &Expected{
 		cstore:                      cs,
@@ -165,7 +168,8 @@ func NewExpected(cs cbor.IpldStore,
 		messageStore:                messageStore,
 		rnd:                         rnd,
 		fork:                        fork,
-		circulatingSupplyCalculator: NewCirculatingSupplyCalculator(bs, chainState),
+		config:                      config,
+		circulatingSupplyCalculator: NewCirculatingSupplyCalculator(bs, chainState, &config.ForkUpgradeParam),
 	}
 	return c
 }
@@ -296,7 +300,7 @@ func (c *Expected) validateBlock(ctx context.Context,
 
 	baseHeight, _ := parent.Height()
 	nulls := blk.Height - (baseHeight + 1)
-	if tgtTs := parent.MinTimestamp() + constants.BlockDelaySecs*uint64(nulls+1); blk.Timestamp != tgtTs {
+	if tgtTs := parent.MinTimestamp() + c.config.BlockDelay*uint64(nulls+1); blk.Timestamp != tgtTs {
 		return xerrors.Errorf("block has wrong timestamp: %d != %d", blk.Timestamp, tgtTs)
 	}
 
@@ -356,7 +360,7 @@ func (c *Expected) validateBlock(ctx context.Context,
 	})
 
 	baseFeeCheck := async.Err(func() error {
-		baseFee, err := c.messageStore.ComputeBaseFee(ctx, parent)
+		baseFee, err := c.messageStore.ComputeBaseFee(ctx, parent, &c.config.ForkUpgradeParam)
 		if err != nil {
 			return xerrors.Errorf("computing base fee: %v", err)
 		}
@@ -391,7 +395,7 @@ func (c *Expected) validateBlock(ctx context.Context,
 		}
 
 		sampleEpoch := blk.Height - constants.TicketRandomnessLookback
-		bSmokeHeight := blk.Height > fork.UpgradeSmokeHeight
+		bSmokeHeight := blk.Height > c.config.ForkUpgradeParam.UpgradeSmokeHeight
 		if err := c.IsValidTicket(ctx, blk.Parents, beaconBase, bSmokeHeight, sampleEpoch, blk.Miner, workerSignerAddr, blk.Ticket); err != nil {
 			return errors.Wrapf(err, "invalid ticket: %s in block %s", blk.Ticket.String(), blk.Cid())
 		}

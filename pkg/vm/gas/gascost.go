@@ -3,10 +3,10 @@ package gas
 import (
 	"fmt"
 
-	"github.com/filecoin-project/venus/pkg/fork"
-
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-actors/actors/runtime/proof"
+
+	"github.com/filecoin-project/venus/pkg/config"
 	"github.com/filecoin-project/venus/pkg/crypto"
 )
 
@@ -130,7 +130,7 @@ var prices = map[abi.ChainEpoch]Pricelist{
 		verifyPostDiscount:   true,
 		verifyConsensusFault: 495422,
 	},
-	fork.UpgradeCalicoHeight: &pricelistV0{
+	config.DefaultForkUpgradeParam.UpgradeCalicoHeight: &pricelistV0{
 		computeGasMulti: 1,
 		storageGasMulti: 1300,
 
