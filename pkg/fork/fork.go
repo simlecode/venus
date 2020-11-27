@@ -4,18 +4,31 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"math"
-	"os"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/network"
+<<<<<<< HEAD
+=======
+	"github.com/filecoin-project/lotus/chain/state"
+	"github.com/filecoin-project/lotus/chain/store"
+	"github.com/filecoin-project/venus/pkg/config"
+	ipfsblock "github.com/ipfs/go-block-format"
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 	"github.com/ipfs/go-cid"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	cbor "github.com/ipfs/go-ipld-cbor"
 	logging "github.com/ipfs/go-log/v2"
 	xerrors "github.com/pkg/errors"
+<<<<<<< HEAD
+=======
+	cbg "github.com/whyrusleeping/cbor-gen"
+	"go.opencensus.io/trace"
+	"math"
+
+	"github.com/filecoin-project/specs-actors/actors/migration/nv3"
+	"github.com/filecoin-project/specs-actors/v2/actors/migration/nv4"
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 
 	builtin0 "github.com/filecoin-project/specs-actors/actors/builtin"
 	miner0 "github.com/filecoin-project/specs-actors/actors/builtin/miner"
@@ -27,6 +40,7 @@ import (
 	"github.com/filecoin-project/specs-actors/v2/actors/migration/nv4"
 	"github.com/filecoin-project/specs-actors/v2/actors/migration/nv7"
 
+	"github.com/filecoin-project/specs-actors/v2/actors/migration/nv7"
 	"github.com/filecoin-project/venus/pkg/block"
 	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/enccid"
@@ -36,13 +50,13 @@ import (
 	"github.com/filecoin-project/venus/pkg/specactors/builtin"
 	init_ "github.com/filecoin-project/venus/pkg/specactors/builtin/init"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/multisig"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
 	vmstate "github.com/filecoin-project/venus/pkg/vm/state"
 )
 
 var log = logging.Logger("fork")
 
+<<<<<<< HEAD
 var (
 	UpgradeSmokeHeight    = abi.ChainEpoch(-1)
 	UpgradeBreezeHeight   = abi.ChainEpoch(0)
@@ -93,6 +107,8 @@ func init() {
 	}
 }
 
+=======
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 // UpgradeFunc is a migration function run at every upgrade.
 //
 // - The oldState is the state produced by the upgrade epoch.
@@ -111,72 +127,81 @@ type Upgrade struct {
 
 type UpgradeSchedule []Upgrade
 
-func DefaultUpgradeSchedule() UpgradeSchedule {
+func defaultUpgradeSchedule(cf *ChainFork, upgradeHeight *config.ForkUpgradeConfig) UpgradeSchedule {
 	var us UpgradeSchedule
 
 	updates := []Upgrade{{
-		Height:    UpgradeBreezeHeight,
+		Height:    upgradeHeight.UpgradeBreezeHeight,
 		Network:   network.Version1,
-		Migration: UpgradeFaucetBurnRecovery,
+		Migration: cf.UpgradeFaucetBurnRecovery,
 	}, {
-		Height:    UpgradeSmokeHeight,
+		Height:    upgradeHeight.UpgradeSmokeHeight,
 		Network:   network.Version2,
 		Migration: nil,
 	}, {
-		Height:    UpgradeIgnitionHeight,
+		Height:    upgradeHeight.UpgradeIgnitionHeight,
 		Network:   network.Version3,
-		Migration: UpgradeIgnition,
+		Migration: cf.UpgradeIgnition,
 	}, {
-		Height:    UpgradeRefuelHeight,
+		Height:    upgradeHeight.UpgradeRefuelHeight,
 		Network:   network.Version3,
-		Migration: UpgradeRefuel,
+		Migration: cf.UpgradeRefuel,
 	}, {
-		Height:    UpgradeActorsV2Height,
+		Height:    upgradeHeight.UpgradeActorsV2Height,
 		Network:   network.Version4,
 		Expensive: true,
-		Migration: UpgradeActorsV2,
+		Migration: cf.UpgradeActorsV2,
 	}, {
-		Height:  UpgradeTapeHeight,
-		Network: network.Version5,
-	}, {
-		Height:    UpgradeLiftoffHeight,
+		Height:    upgradeHeight.UpgradeTapeHeight,
 		Network:   network.Version5,
-		Migration: UpgradeLiftoff,
+		Migration: nil,
 	}, {
-		Height:    UpgradeKumquatHeight,
+		Height:    upgradeHeight.UpgradeLiftoffHeight,
+		Network:   network.Version5,
+		Migration: cf.UpgradeLiftoff,
+	}, {
+		Height:    upgradeHeight.UpgradeKumquatHeight,
 		Network:   network.Version6,
 		Migration: nil,
 	}, {
+<<<<<<< HEAD
 		Height:    UpgradeCalicoHeight,
 		Network:   network.Version7,
 		Migration: UpgradeCalico,
 	}, {
 		Height:    UpgradePersianHeight,
+=======
+		Height:    upgradeHeight.UpgradeCalicoHeight,
+		Network:   network.Version7,
+		Migration: cf.UpgradeCalico,
+	}, {
+		Height:    upgradeHeight.UpgradePersianHeight,
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 		Network:   network.Version8,
 		Migration: nil,
 	}}
 
-	if UpgradeActorsV2Height == math.MaxInt64 { // disable actors upgrade
+	if upgradeHeight.UpgradeActorsV2Height == math.MaxInt64 { // disable actors upgrade
 		updates = []Upgrade{{
-			Height:    UpgradeBreezeHeight,
+			Height:    upgradeHeight.UpgradeBreezeHeight,
 			Network:   network.Version1,
-			Migration: UpgradeFaucetBurnRecovery,
+			Migration: cf.UpgradeFaucetBurnRecovery,
 		}, {
-			Height:    UpgradeSmokeHeight,
+			Height:    upgradeHeight.UpgradeSmokeHeight,
 			Network:   network.Version2,
 			Migration: nil,
 		}, {
-			Height:    UpgradeIgnitionHeight,
+			Height:    upgradeHeight.UpgradeIgnitionHeight,
 			Network:   network.Version3,
-			Migration: UpgradeIgnition,
+			Migration: cf.UpgradeIgnition,
 		}, {
-			Height:    UpgradeRefuelHeight,
+			Height:    upgradeHeight.UpgradeRefuelHeight,
 			Network:   network.Version3,
-			Migration: UpgradeRefuel,
+			Migration: cf.UpgradeRefuel,
 		}, {
-			Height:    UpgradeLiftoffHeight,
+			Height:    upgradeHeight.UpgradeLiftoffHeight,
 			Network:   network.Version3,
-			Migration: UpgradeLiftoff,
+			Migration: cf.UpgradeLiftoff,
 		}}
 	}
 
@@ -246,6 +271,9 @@ type ChainFork struct {
 	// calls for, e.g., gas estimation fail against this epoch with
 	// ErrExpensiveFork.
 	expensiveUpgrades map[abi.ChainEpoch]struct{}
+
+	// upgrade param
+	forkUpgrade *config.ForkUpgradeConfig
 }
 
 type versionSpec struct {
@@ -253,9 +281,17 @@ type versionSpec struct {
 	atOrBelow      abi.ChainEpoch
 }
 
-func NewChainFork(cr chainReader, ipldstore cbor.IpldStore, bs blockstore.Blockstore) (*ChainFork, error) {
+func NewChainFork(cr chainReader, ipldstore cbor.IpldStore, bs blockstore.Blockstore, forkUpgrade *config.ForkUpgradeConfig) (*ChainFork, error) {
+
+	fork := &ChainFork{
+		cr:          cr,
+		bs:          bs,
+		ipldstore:   ipldstore,
+		forkUpgrade: forkUpgrade,
+	}
+
 	// If we have upgrades, make sure they're in-order and make sense.
-	us := DefaultUpgradeSchedule()
+	us := defaultUpgradeSchedule(fork, forkUpgrade)
 	if err := us.Validate(); err != nil {
 		return nil, err
 	}
@@ -285,17 +321,11 @@ func NewChainFork(cr chainReader, ipldstore cbor.IpldStore, bs blockstore.Blocks
 		lastVersion = constants.NewestNetworkVersion
 	}
 
-	fork := &ChainFork{
-		cr:        cr,
-		bs:        bs,
-		ipldstore: ipldstore,
+	fork.networkVersions = networkVersions
+	fork.latestVersion = lastVersion
+	fork.stateMigrations = stateMigrations
+	fork.expensiveUpgrades = expensiveUpgrades
 
-		networkVersions: networkVersions,
-		latestVersion:   lastVersion,
-
-		stateMigrations:   stateMigrations,
-		expensiveUpgrades: expensiveUpgrades,
-	}
 	return fork, nil
 }
 
@@ -381,7 +411,7 @@ func (fork *ChainFork) ParentState(ts *block.TipSet) cid.Cid {
 	return cid.Undef
 }
 
-func UpgradeFaucetBurnRecovery(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
+func (c *ChainFork) UpgradeFaucetBurnRecovery(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
 	// Some initial parameters
 	FundsForMiners := types.FromFil(1_000_000)
 	LookbackEpoch := abi.ChainEpoch(32000)
@@ -887,10 +917,10 @@ func resetMultisigVesting0(ctx context.Context, store adt0.Store, tree *vmstate.
 	return nil
 }
 
-func UpgradeIgnition(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
+func (c *ChainFork) UpgradeIgnition(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
 	store := adt.WrapStore(ctx, sm.ipldstore)
 
-	if UpgradeLiftoffHeight <= epoch {
+	if c.forkUpgrade.UpgradeLiftoffHeight <= epoch {
 		return cid.Undef, xerrors.Errorf("liftoff height must be beyond ignition height")
 	}
 
@@ -919,7 +949,7 @@ func UpgradeIgnition(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi
 		return cid.Undef, xerrors.Errorf("second split address: %v", err)
 	}
 
-	err = resetGenesisMsigs0(ctx, sm, store, tree, UpgradeLiftoffHeight)
+	err = resetGenesisMsigs0(ctx, sm, store, tree, c.forkUpgrade.UpgradeLiftoffHeight)
 	if err != nil {
 		return cid.Undef, xerrors.Errorf("resetting genesis msig start epochs: %v", err)
 	}
@@ -942,7 +972,7 @@ func UpgradeIgnition(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi
 	return tree.Flush(ctx)
 }
 
-func UpgradeRefuel(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
+func (c *ChainFork) UpgradeRefuel(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
 	store := adt.WrapStore(ctx, sm.ipldstore)
 	tree, err := sm.StateTree(ctx, root)
 	if err != nil {
@@ -971,7 +1001,155 @@ func ActorStore(ctx context.Context, bs blockstore.Blockstore) adt.Store {
 	return adt.WrapStore(ctx, cbor.NewCborStore(bs))
 }
 
+<<<<<<< HEAD
 func UpgradeActorsV2(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
+=======
+func linksForObj(blk ipfsblock.Block, cb func(cid.Cid)) error {
+	switch blk.Cid().Prefix().Codec {
+	case cid.DagCBOR:
+		err := cbg.ScanForLinks(bytes.NewReader(blk.RawData()), cb)
+		if err != nil {
+			return xerrors.Errorf("cbg.ScanForLinks: %v", err)
+		}
+		return nil
+	case cid.Raw:
+		// We implicitly have all children of raw blocks.
+		return nil
+	default:
+		return xerrors.Errorf("vm flush copy method only supports dag cbor")
+	}
+}
+
+func copyRec(from, to blockstore.Blockstore, root cid.Cid, cp func(ipfsblock.Block) error) error {
+	if root.Prefix().MhType == 0 {
+		// identity cid, skip
+		return nil
+	}
+
+	blk, err := from.Get(root)
+	if err != nil {
+		return xerrors.Errorf("get %s failed: %v", root, err)
+	}
+
+	var lerr error
+	err = linksForObj(blk, func(link cid.Cid) {
+		if lerr != nil {
+			// Theres no erorr return on linksForObj callback :(
+			return
+		}
+
+		prefix := link.Prefix()
+		if prefix.Codec == cid.FilCommitmentSealed || prefix.Codec == cid.FilCommitmentUnsealed {
+			return
+		}
+
+		// We always have blocks inlined into CIDs, but we may not have their children.
+		if prefix.MhType == mh.IDENTITY {
+			// Unless the inlined block has no children.
+			if prefix.Codec == cid.Raw {
+				return
+			}
+		} else {
+			// If we have an object, we already have its children, skip the object.
+			has, err := to.Has(link)
+			if err != nil {
+				lerr = xerrors.Errorf("has: %v", err)
+				return
+			}
+			if has {
+				return
+			}
+		}
+
+		if err := copyRec(from, to, link, cp); err != nil {
+			lerr = err
+			return
+		}
+	})
+	if err != nil {
+		return xerrors.Errorf("linksForObj (%x): %v", blk.RawData(), err)
+	}
+	if lerr != nil {
+		return lerr
+	}
+
+	if err := cp(blk); err != nil {
+		return xerrors.Errorf("copy: %v", err)
+	}
+	return nil
+}
+
+func Copy(ctx context.Context, from, to blockstore.Blockstore, root cid.Cid) error {
+	ctx, span := trace.StartSpan(ctx, "vm.Copy") // nolint
+	defer span.End()
+
+	var numBlocks int
+	var totalCopySize int
+
+	const batchSize = 128
+	const bufCount = 3
+	freeBufs := make(chan []ipfsblock.Block, bufCount)
+	toFlush := make(chan []ipfsblock.Block, bufCount)
+	for i := 0; i < bufCount; i++ {
+		freeBufs <- make([]ipfsblock.Block, 0, batchSize)
+	}
+
+	errFlushChan := make(chan error)
+
+	go func() {
+		for b := range toFlush {
+			if err := to.PutMany(b); err != nil {
+				close(freeBufs)
+				errFlushChan <- xerrors.Errorf("batch put in copy: %v", err)
+				return
+			}
+			freeBufs <- b[:0]
+		}
+		close(errFlushChan)
+		close(freeBufs)
+	}()
+
+	var batch = <-freeBufs
+	batchCp := func(blk ipfsblock.Block) error {
+		numBlocks++
+		totalCopySize += len(blk.RawData())
+
+		batch = append(batch, blk)
+
+		if len(batch) >= batchSize {
+			toFlush <- batch
+			var ok bool
+			batch, ok = <-freeBufs
+			if !ok {
+				return <-errFlushChan
+			}
+		}
+		return nil
+	}
+
+	if err := copyRec(from, to, root, batchCp); err != nil {
+		return xerrors.Errorf("copyRec: %v", err)
+	}
+
+	if len(batch) > 0 {
+		toFlush <- batch
+	}
+	close(toFlush)        // close the toFlush triggering the loop to end
+	err := <-errFlushChan // get error out or get nil if it was closed
+	if err != nil {
+		return err
+	}
+
+	span.AddAttributes(
+		trace.Int64Attribute("numBlocks", int64(numBlocks)),
+		trace.Int64Attribute("copySize", int64(totalCopySize)),
+	)
+
+	return nil
+}
+
+func (c *ChainFork) UpgradeActorsV2(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 	buf := bufbstore.NewTieredBstore(sm.bs, bstore.NewTemporarySync())
 	store := ActorStore(ctx, buf)
 
@@ -1018,7 +1196,7 @@ func UpgradeActorsV2(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi
 	return newRoot, nil
 }
 
-func UpgradeLiftoff(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
+func (c *ChainFork) UpgradeLiftoff(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
 	tree, err := sm.StateTree(ctx, root)
 	if err != nil {
 		return cid.Undef, xerrors.Errorf("getting state tree: %v", err)
@@ -1032,8 +1210,15 @@ func UpgradeLiftoff(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.
 	return tree.Flush(ctx)
 }
 
+<<<<<<< HEAD
 func UpgradeCalico(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
 	store := adt.WrapStore(ctx, sm.ipldstore)
+=======
+func (c *ChainFork) UpgradeCalico(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.ChainEpoch, ts *block.TipSet) (cid.Cid, error) {
+	buf := bufbstore.NewTieredBstore(sm.bs, bstore.NewTemporarySync())
+	store := store.ActorStore(ctx, buf)
+
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 	var stateRoot vmstate.StateRoot
 	if err := store.Get(ctx, root, &stateRoot); err != nil {
 		return cid.Undef, xerrors.Errorf("failed to decode state root: %w", err)
@@ -1061,13 +1246,21 @@ func UpgradeCalico(ctx context.Context, sm *ChainFork, root cid.Cid, epoch abi.C
 	}
 
 	// perform some basic sanity checks to make sure everything still works.
+<<<<<<< HEAD
 	if newSm, err := vmstate.LoadState(ctx, store, newRoot); err != nil {
+=======
+	if newSm, err := state.LoadStateTree(store, newRoot); err != nil {
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 		return cid.Undef, xerrors.Errorf("state tree sanity load failed: %w", err)
 	} else if newRoot2, err := newSm.Flush(ctx); err != nil {
 		return cid.Undef, xerrors.Errorf("state tree sanity flush failed: %w", err)
 	} else if newRoot2 != newRoot {
 		return cid.Undef, xerrors.Errorf("state-root mismatch: %s != %s", newRoot, newRoot2)
+<<<<<<< HEAD
 	} else if _, _, err := newSm.GetActor(ctx, builtin0.InitActorAddr); err != nil {
+=======
+	} else if _, err := newSm.GetActor(builtin0.InitActorAddr); err != nil {
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 		return cid.Undef, xerrors.Errorf("failed to load init actor after upgrade: %w", err)
 	}
 

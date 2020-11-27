@@ -2,6 +2,11 @@ package consensus
 
 import (
 	"context"
+<<<<<<< HEAD
+=======
+	"github.com/filecoin-project/venus/pkg/config"
+	"github.com/filecoin-project/venus/pkg/constants"
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 	"sync"
 
 	"github.com/filecoin-project/venus/pkg/constants"
@@ -17,7 +22,6 @@ import (
 	msig0 "github.com/filecoin-project/specs-actors/actors/builtin/multisig"
 
 	"github.com/filecoin-project/venus/pkg/block"
-	"github.com/filecoin-project/venus/pkg/fork"
 	"github.com/filecoin-project/venus/pkg/fork/blockstore"
 	"github.com/filecoin-project/venus/pkg/specactors/adt"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin"
@@ -59,13 +63,18 @@ type CirculatingSupplyCalculator struct {
 	// info about the Accounts in the genesis state
 	preIgnitionGenInfos  *genesisInfo
 	postIgnitionGenInfos *genesisInfo
+<<<<<<< HEAD
 	postCalicoGenInfos   *genesisInfo
 
 	genesisMsigLk sync.Mutex
+=======
+	genesisMsigLk        sync.Mutex
+	upgradeConfig        *config.ForkUpgradeConfig
+>>>>>>> 886e8d89... sync chain with lotus in net-2k mode
 }
 
-func NewCirculatingSupplyCalculator(bstore blockstore.Blockstore, genesisReader genesisReader) *CirculatingSupplyCalculator {
-	return &CirculatingSupplyCalculator{bstore: bstore, genesisReader: genesisReader}
+func NewCirculatingSupplyCalculator(bstore blockstore.Blockstore, genesisReader genesisReader, upgradeConfig *config.ForkUpgradeConfig) *CirculatingSupplyCalculator {
+	return &CirculatingSupplyCalculator{bstore: bstore, genesisReader: genesisReader, upgradeConfig: upgradeConfig}
 }
 
 func (caculator *CirculatingSupplyCalculator) GetCirculatingSupplyDetailed(ctx context.Context, height abi.ChainEpoch, st state.Tree) (CirculatingSupply, error) {
@@ -90,7 +99,7 @@ func (caculator *CirculatingSupplyCalculator) GetCirculatingSupplyDetailed(ctx c
 	}
 
 	filReserveDisbursed := big.Zero()
-	if height > fork.UpgradeActorsV2Height {
+	if height > caculator.upgradeConfig.UpgradeActorsV2Height {
 		filReserveDisbursed, err = GetFilReserveDisbursed(ctx, st)
 		if err != nil {
 			return CirculatingSupply{}, xerrors.Errorf("failed to calculate filReserveDisbursed: %v", err)
@@ -200,7 +209,7 @@ func GetFilBurnt(ctx context.Context, st state.Tree) (abi.TokenAmount, error) {
 
 func (caculator *CirculatingSupplyCalculator) GetFilVested(ctx context.Context, height abi.ChainEpoch, st state.Tree) (abi.TokenAmount, error) {
 	vf := big.Zero()
-	if height <= fork.UpgradeIgnitionHeight {
+	if height <= caculator.upgradeConfig.UpgradeIgnitionHeight {
 		for _, v := range caculator.preIgnitionGenInfos.genesisMsigs {
 			au := big.Sub(v.InitialBalance, v.AmountLocked(height))
 			vf = big.Add(vf, au)
@@ -236,7 +245,7 @@ func (caculator *CirculatingSupplyCalculator) GetFilVested(ctx context.Context, 
 	}
 
 	// After UpgradeActorsV2Height these funds are accounted for in GetFilReserveDisbursed
-	if height <= fork.UpgradeActorsV2Height {
+	if height <= caculator.upgradeConfig.UpgradeActorsV2Height {
 		// continue to use preIgnitionGenInfos, nothing changed at the Ignition epoch
 		vf = big.Add(vf, caculator.preIgnitionGenInfos.genesisPledge)
 		// continue to use preIgnitionGenInfos, nothing changed at the Ignition epoch
@@ -441,7 +450,7 @@ func (caculator *CirculatingSupplyCalculator) setupPostIgnitionGenesisActors(ctx
 			UnlockDuration: k,
 			PendingTxns:    cid.Undef,
 			// In the pre-ignition logic, the start epoch was 0. This changes in the fork logic of the Ignition upgrade itself.
-			StartEpoch: fork.UpgradeLiftoffHeight,
+			StartEpoch: caculator.upgradeConfig.UpgradeLiftoffHeight,
 		}
 		gi.genesisMsigs = append(gi.genesisMsigs, ns)
 	}
