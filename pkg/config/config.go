@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus/pkg/beacon"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -13,6 +12,8 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/pkg/errors"
+
+	"github.com/filecoin-project/venus/pkg/beacon"
 )
 
 // Config is an in memory representation of the filecoin configuration file
