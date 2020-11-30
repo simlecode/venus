@@ -3,9 +3,10 @@ package syncer
 import (
 	"context"
 	"fmt"
-	"github.com/filecoin-project/venus/pkg/util"
 	"sync"
 	"time"
+
+	"github.com/filecoin-project/venus/pkg/util"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -385,6 +386,8 @@ func (syncer *Syncer) syncOne(ctx context.Context, parent, next *block.TipSet) e
 	// Run a state transition to validate the tipset and compute
 	// a new state to add to the bsstore.
 	toProcessTime := time.Now()
+	h, _ := next.Height()
+	fmt.Printf("process tipset: %v, height: %v\n", parentStateRoot, h)
 	root, receipts, err := syncer.fullValidator.RunStateTransition(ctx, next, secpMessages, blsMessages, parentStateRoot)
 	if err != nil {
 		return xerrors.Errorf("calc current tipset %s state failed %w", next.Key().String(), err)

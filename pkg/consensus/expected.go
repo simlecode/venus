@@ -318,6 +318,7 @@ func (c *Expected) validateBlock(ctx context.Context,
 		return xerrors.Errorf("get parent tipset state failed %s", err)
 	}
 	if !parentStateRoot.Equals(blk.StateRoot.Cid) {
+		fmt.Println("parentStateRoot: ", parentStateRoot, " blk.StateRoot.Cid: ", blk.StateRoot.Cid)
 		return ErrStateRootMismatch
 	}
 

@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/filecoin-project/go-address"
@@ -79,7 +80,7 @@ func (pool *Pool) Add(ctx context.Context, msg *types.SignedMessage, height abi.
 	}
 
 	if err = pool.validateMessage(ctx, msg); err != nil {
-		return cid.Undef, errors.Wrap(err, "validation error adding message to pool")
+		return cid.Undef, errors.Wrap(err, fmt.Sprintf("validation error adding message to pool, cid: %s", c))
 	}
 
 	pool.pending[c] = &timedmessage{message: msg, addedAt: height}
@@ -165,7 +166,7 @@ func (pool *Pool) validateMessage(ctx context.Context, message *types.SignedMess
 	// check that message with this nonce does not already exist
 	_, found := pool.addressNonces[newAddressNonce(message)]
 	if found {
-		return errors.Errorf("message pool contains message with same actor and nonce but different cid")
+		return errors.Errorf("message pool contains message with same actor and nonce but different cid, addr: %s, nonce: %v", message.Message.From, message.Message.CallSeqNum)
 	}
 
 	// check that the message is likely to succeed in processing
