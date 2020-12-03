@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/ipfs/go-cid"
@@ -74,6 +75,8 @@ func (ib *Inbox) HandleNewHead(ctx context.Context, oldChain, newChain []*block.
 		return err
 	}
 
+	log.Error("Inbox.HandleNewHead", oldChain)
+	fmt.Println("Inbox.HandleNewHead", newChain)
 	for _, tipset := range oldChain {
 		for i := 0; i < tipset.Len(); i++ {
 			block := tipset.At(i)
