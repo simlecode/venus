@@ -215,6 +215,7 @@ func (vm *VM) ApplyTipSetMessages(blocks []block.BlockMessagesInfo, ts *block.Ti
 
 	// process messages on each block
 	for index, blkInfo := range blocks {
+		fmt.Println("start to process block ", index)
 		tStart = time.Now()
 		if blkInfo.Block.Miner.Protocol() != address.ID {
 			panic("precond failure: block miner address must be an IDAddress")
@@ -246,6 +247,9 @@ func (vm *VM) ApplyTipSetMessages(blocks []block.BlockMessagesInfo, ts *block.Ti
 			}
 			// flag msg as seen
 			seenMsgs[mcid] = struct{}{}
+			//root, _ := vm.state.Flush(context.TODO())
+			//
+			//fmt.Println(fmt.Sprintf("message: %s  root: %s gasUsed: %v", m.Cid(), root, ret.GasTracker.GasUsed))
 
 			if vm.vmDebug {
 				rootCid, _ := vm.flush()

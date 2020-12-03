@@ -328,6 +328,8 @@ func (c *Expected) validateBlock(ctx context.Context,
 		return xerrors.Errorf("get parent tipset state failed %s", err)
 	}
 	if !parentStateRoot.Equals(blk.ParentStateRoot.Cid) {
+		fmt.Printf("baseHeight: %d, blk.height: %d, parentStateRoot: %s, blk.ParentStateRoot: %s, parentReceiptRoot: %s, blk.ParentMessageReceipts: %s\n",
+			baseHeight, blk.Height, parentStateRoot, blk.ParentStateRoot.Cid, parentReceiptRoot, blk.ParentMessageReceipts)
 		return ErrStateRootMismatch
 	}
 

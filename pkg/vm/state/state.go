@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 
+	"go.opencensus.io/trace"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	fxamackercbor "github.com/fxamacker/cbor/v2"
@@ -14,7 +16,6 @@ import (
 	cbor "github.com/ipfs/go-ipld-cbor"
 	logging "github.com/ipfs/go-log/v2"
 	cbg "github.com/whyrusleeping/cbor-gen"
-	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus/pkg/enccid"
@@ -214,6 +215,7 @@ func LoadState(ctx context.Context, cst cbor.IpldStore, c cid.Cid) (*State, erro
 
 func (st *State) SetActor(ctx context.Context, addr ActorKey, act *types.Actor) error {
 	stateLog.Debugf("set actor addr:", addr.String(), " Balance:", act.Balance.String(), " Head:", act.Head, " Nonce:", act.Nonce)
+	fmt.Println("set actor addr:", addr.String(), " Balance:", act.Balance.String(), " Head:", act.Head, " Nonce:", act.Nonce)
 	iaddr, err := st.LookupID(addr)
 	if err != nil {
 		return xerrors.Errorf("ID lookup failed: %w", err)
