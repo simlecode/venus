@@ -372,6 +372,9 @@ func (chn *ChainStateReadWriter) StateView(key block.TipSetKey) (*state.View, er
 }
 
 func (chn *ChainStateReadWriter) ParentStateView(key block.TipSetKey) (*state.View, error) {
+	if key.Empty() {
+		key = chn.readWriter.GetHead()
+	}
 	ts, err := chn.readWriter.GetTipSet(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get tipset for %s", key.String())

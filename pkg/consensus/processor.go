@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"context"
+
 	"go.opencensus.io/trace"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -9,6 +10,7 @@ import (
 	"github.com/filecoin-project/venus/pkg/block"
 	"github.com/filecoin-project/venus/pkg/metrics/tracing"
 	"github.com/filecoin-project/venus/pkg/types"
+
 	//"github.com/filecoin-project/venus/internal/pkg/proofs"
 	"github.com/filecoin-project/venus/pkg/vm"
 	"github.com/filecoin-project/venus/pkg/vm/state"
@@ -91,4 +93,13 @@ func (p *DefaultProcessor) ProcessUnsignedMessage(ctx context.Context, msg *type
 	v := vm.NewVM(st, vms, p.syscalls, vmOption)
 	ret = v.ApplyMessage(msg)
 	return ret, nil
+}
+
+func (p *DefaultProcessor) ProcessImplicitMessage(ctx context.Context, msg *types.UnsignedMessage, st state.Tree, vms *vm.Storage, vmOption vm.VmOption) (ret *vm.Ret, err error) {
+	ctx, span := trace.StartSpan(ctx, "DefaultProcessor.ProcessImplicitMessage")
+	span.AddAttributes(trace.StringAttribute("message", msg.String()))
+	defer tracing.AddErrorEndSpan(ctx, span, &err)
+
+	v := vm.NewVM(st, vms, p.syscalls, vmOption)
+	return v.ApplyImplicitMessage(msg)
 }

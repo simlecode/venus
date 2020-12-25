@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
 	"github.com/ipfs/go-cid"
 	xerrors "github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -98,6 +99,15 @@ func (c *Expected) CallWithGas(ctx context.Context, msg *types.UnsignedMessage, 
 		}
 	}
 
+	fromActor, found, err := priorState.GetActor(ctx, msg.From)
+	if err != nil {
+		return nil, xerrors.Errorf("get actor failed: %s", err)
+	}
+	if !found {
+		return nil, xerrors.New("actor not found")
+	}
+	msg.Nonce = fromActor.Nonce
+
 	return c.processor.ProcessUnsignedMessage(ctx, msg, priorState, vms, vmOption)
 }
 
@@ -153,6 +163,16 @@ func (c *Expected) Call(ctx context.Context, msg *types.UnsignedMessage, ts *blo
 	if msg.GasLimit == 0 {
 		msg.GasLimit = constants.BlockGasLimit
 	}
+	if msg.GasFeeCap.Nil() {
+		msg.GasFeeCap = big.NewInt(0)
+	}
+	if msg.GasPremium.Nil() {
+		msg.GasPremium = big.NewInt(0)
+	}
+
+	if msg.Value.Nil() {
+		msg.Value = big.NewInt(0)
+	}
 
 	vms := vm.NewStorage(c.bstore)
 	st, err := state.LoadState(ctx, vms, bstate)
@@ -182,5 +202,5 @@ func (c *Expected) Call(ctx context.Context, msg *types.UnsignedMessage, ts *blo
 	}
 
 	// TODO: maybe just use the invoker directly?
-	return c.processor.ProcessUnsignedMessage(ctx, msg, st, vms, vmOption)
+	return c.processor.ProcessImplicitMessage(ctx, msg, st, vms, vmOption)
 }

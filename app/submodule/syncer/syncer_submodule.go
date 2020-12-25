@@ -2,9 +2,10 @@ package syncer
 
 import (
 	"context"
+	"time"
+
 	"github.com/filecoin-project/venus/pkg/chainsync/slashfilter"
 	"github.com/filecoin-project/venus/pkg/vm/gas"
-	"time"
 
 	"github.com/filecoin-project/venus/pkg/repo"
 
@@ -162,6 +163,7 @@ func NewSyncerSubmodule(ctx context.Context,
 		ChainSelector:    nodeChainSelector,
 		ChainSyncManager: &chainSyncManager,
 		Drand:            chn.Drand,
+		SyncProvider:     *NewChainSyncProvider(&chainSyncManager),
 		// cancelChainSync: nil,
 		faultCh: faultCh,
 	}, nil

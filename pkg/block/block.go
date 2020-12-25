@@ -91,22 +91,22 @@ const IndexParentsField = 5
 
 // Cid returns the content id of this block.
 func (b *Block) Cid() cid.Cid {
-	if b.cachedCid == cid.Undef {
-		if b.cachedBytes == nil {
-			bytes, err := encoding.Encode(b)
-			if err != nil {
-				panic(err)
-			}
-			b.cachedBytes = bytes
-		}
-		c, err := constants.DefaultCidBuilder.Sum(b.cachedBytes)
+	if b.BeaconEntries == nil {
+		b.BeaconEntries = []*BeaconEntry{}
+	}
+	if b.cachedBytes == nil {
+		bytes, err := encoding.Encode(b)
 		if err != nil {
 			panic(err)
 		}
-
-		b.cachedCid = c
+		b.cachedBytes = bytes
+	}
+	c, err := constants.DefaultCidBuilder.Sum(b.cachedBytes)
+	if err != nil {
+		panic(err)
 	}
 
+	b.cachedCid = c
 	return b.cachedCid
 }
 
@@ -179,6 +179,9 @@ func (b *Block) SignatureData() []byte {
 		ForkSignaling:         b.ForkSignaling,
 		ParentBaseFee:         b.ParentBaseFee,
 		// BlockSig omitted
+	}
+	if tmp.BeaconEntries == nil {
+		tmp.BeaconEntries = []*BeaconEntry{}
 	}
 
 	return tmp.ToNode().RawData()

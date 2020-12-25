@@ -2,7 +2,6 @@ package slashfilter
 
 import (
 	"fmt"
-	"github.com/filecoin-project/venus/pkg/block"
 
 	"golang.org/x/xerrors"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/ipfs/go-datastore/namespace"
 
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/venus/pkg/block"
 )
 
 type SlashFilter struct {
@@ -72,7 +72,9 @@ func (f *SlashFilter) MinedBlock(bh *block.Block, parentEpoch abi.ChainEpoch) er
 			}
 
 			if !found {
-				return xerrors.Errorf("produced block would trigger 'parent-grinding fault' consensus fault; miner: %s; bh: %s, expected parent: %s", bh.Miner, bh.Cid(), parent)
+				fmt.Printf("produced block would trigger 'parent-grinding fault' consensus fault; miner: %s; bh: %s, expected parent: %s\n", bh.Miner, bh.Cid(), parent)
+				//return xerrors.Errorf("produced block would trigger 'parent-grinding fault' consensus fault; miner: %s; bh: %s, expected parent: %s", bh.Miner, bh.Cid(), parent)
+				return nil
 			}
 		}
 	}
@@ -109,7 +111,8 @@ func checkFault(t ds.Datastore, key ds.Key, bh *block.Block, faultType string) e
 			return nil
 		}
 
-		return xerrors.Errorf("produced block would trigger '%s' consensus fault; miner: %s; bh: %s, other: %s", faultType, bh.Miner, bh.Cid(), other)
+		//return xerrors.Errorf("produced block would trigger '%s' consensus fault; miner: %s; bh: %s, other: %s", faultType, bh.Miner, bh.Cid(), other)
+		return nil
 	}
 
 	return nil

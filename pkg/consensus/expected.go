@@ -75,6 +75,7 @@ type Processor interface {
 	// ProcessTipSet processes all messages in a tip set.
 	ProcessTipSet(context.Context, state.Tree, *vm.Storage, *block.TipSet, *block.TipSet, []block.BlockMessagesInfo, vm.VmOption) ([]types.MessageReceipt, error)
 	ProcessUnsignedMessage(context.Context, *types.UnsignedMessage, state.Tree, *vm.Storage, vm.VmOption) (*vm.Ret, error)
+	ProcessImplicitMessage(context.Context, *types.UnsignedMessage, state.Tree, *vm.Storage, vm.VmOption) (*vm.Ret, error)
 }
 
 // TicketValidator validates that an input ticket is valid.

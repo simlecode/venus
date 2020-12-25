@@ -24,7 +24,7 @@ type SignedMessage struct {
 	// control field for encoding struct as an array
 	_ struct{} `cbor:",toarray"`
 
-	Message   UnsignedMessage  `json:"meteredMessage"`
+	Message   UnsignedMessage  `json:"message"`
 	Signature crypto.Signature `json:"signature"`
 	// Pay attention to Equals() if updating this struct.
 }

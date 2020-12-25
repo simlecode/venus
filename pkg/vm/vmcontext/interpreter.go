@@ -15,4 +15,5 @@ type VMInterpreter interface {
 	ApplyTipSetMessages(blocks []block.BlockMessagesInfo, ts *block.TipSet, parentEpoch abi.ChainEpoch, epoch abi.ChainEpoch, cb ExecCallBack) ([]types.MessageReceipt, error)
 	ContextStore() adt.Store
 	ApplyMessage(msg types.ChainMsg) *Ret
+	ApplyImplicitMessage(msg types.ChainMsg) (*Ret, error)
 }

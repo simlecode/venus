@@ -71,6 +71,9 @@ func (syncerAPI *SyncerAPI) SyncSubmitBlock(ctx context.Context, blk *block.Bloc
 		return xerrors.Errorf("somehow failed to make a tipset out of a single block: %v", err)
 	}
 
+	if err := chainModule.ChainReader.PutTipset(ctx, ts); err != nil {
+		return err
+	}
 	localPeer := syncerAPI.syncer.NetworkModule.Network.GetPeerID()
 	if err := syncerAPI.syncer.SyncProvider.HandleNewTipSet(&block.ChainInfo{
 		Source: localPeer,
@@ -85,16 +88,24 @@ func (syncerAPI *SyncerAPI) SyncSubmitBlock(ctx context.Context, blk *block.Bloc
 	if err != nil {
 		return xerrors.Errorf("serializing block for pubsub publishing failed: %v", err)
 	}
-
-	return syncerAPI.syncer.BlockTopic.Publish(ctx, b) //nolint:staticcheck
+	go func() {
+		syncerAPI.syncer.BlockTopic.Publish(ctx, b) //nolint:staticcheck
+	}()
+	return nil
 }
 
-func (syncerAPI *SyncerAPI) StateCall(ctx context.Context, msg *types.UnsignedMessage, ts *block.TipSet) (*InvocResult, error) {
+func (syncerAPI *SyncerAPI) StateCall(ctx context.Context, msg *types.UnsignedMessage, tsk block.TipSetKey) (*InvocResult, error) {
 	start := time.Now()
-	ret, err := syncerAPI.syncer.Consensus.Call(ctx, msg, ts)
-	var errs string
+	if tsk.Empty() {
+		tsk = syncerAPI.syncer.ChainModule.ChainReader.GetHead()
+	}
+	ts, err := syncerAPI.syncer.ChainModule.ChainReader.GetTipSet(tsk)
 	if err != nil {
-		errs = err.Error()
+		return nil, xerrors.Errorf("loading tipset %s: %v", tsk, err)
+	}
+	ret, err := syncerAPI.syncer.Consensus.Call(ctx, msg, ts)
+	if err != nil {
+		return nil, err
 	}
 	duration := time.Now().Sub(start)
 
@@ -104,7 +115,6 @@ func (syncerAPI *SyncerAPI) StateCall(ctx context.Context, msg *types.UnsignedMe
 		Msg:            msg,
 		MsgRct:         &ret.Receipt,
 		ExecutionTrace: types.ExecutionTrace{},
-		Error:          errs,
 		Duration:       duration,
 	}, nil
 
