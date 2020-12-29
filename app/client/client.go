@@ -83,6 +83,7 @@ type FullNode struct {
 	StateMinerInitialPledgeCollateral  func(context.Context, address.Address, miner.SectorPreCommitInfo, block.TipSetKey) (big.Int, error)
 	StateVMCirculatingSupplyInternal   func(context.Context, block.TipSetKey) (chain.CirculatingSupply, error)
 	StateCirculatingSupply             func(context.Context, block.TipSetKey) (abi.TokenAmount, error)
+	StateLookupID                      func(ctx context.Context, addr address.Address, tsk block.TipSetKey) (address.Address, error)
 
 	StateAccountKey func(context.Context, address.Address, block.TipSetKey) (address.Address, error)
 
@@ -238,6 +239,7 @@ type MinerStateAPI struct {
 	StateMinerInitialPledgeCollateral  func(context.Context, address.Address, miner.SectorPreCommitInfo, block.TipSetKey) (big.Int, error)
 	StateVMCirculatingSupplyInternal   func(context.Context, block.TipSetKey) (chain.CirculatingSupply, error)
 	StateCirculatingSupply             func(context.Context, block.TipSetKey) (abi.TokenAmount, error)
+	StateLookupID                      func(ctx context.Context, addr address.Address, tsk block.TipSetKey) (address.Address, error)
 }
 
 type AccountAPI struct {

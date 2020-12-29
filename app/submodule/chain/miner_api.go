@@ -470,3 +470,16 @@ func (minerStateAPI *MinerStateAPI) StateVMCirculatingSupplyInternal(ctx context
 func (minerStateAPI *MinerStateAPI) StateCirculatingSupply(ctx context.Context, tsk block.TipSetKey) (abi.TokenAmount, error) {
 	return minerStateAPI.chain.ChainReader.StateCirculatingSupply(ctx, tsk)
 }
+
+func (minerStateAPI *MinerStateAPI) StateLookupID(ctx context.Context, addr address.Address, tsk block.TipSetKey) (address.Address, error) {
+	if tsk.IsEmpty() {
+		tsk = minerStateAPI.chain.ChainReader.GetHead()
+	}
+
+	state, err := minerStateAPI.chain.State.GetTipSetState(ctx, tsk)
+	if err != nil {
+		return address.Undef, xerrors.Errorf("load state tree: %v", err)
+	}
+
+	return state.LookupID(addr)
+}
