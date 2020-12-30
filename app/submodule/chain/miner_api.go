@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/dline"
+	"github.com/ipfs/go-cid"
 	xerrors "github.com/pkg/errors"
 
 	"github.com/filecoin-project/venus/pkg/block"
@@ -17,6 +18,7 @@ import (
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/power"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/reward"
+	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/filecoin-project/venus/pkg/vm/state"
 )
 
@@ -482,4 +484,162 @@ func (minerStateAPI *MinerStateAPI) StateLookupID(ctx context.Context, addr addr
 	}
 
 	return state.LookupID(addr)
+}
+
+func (minerStateAPI *MinerStateAPI) StateListMiners(ctx context.Context, tsk block.TipSetKey) ([]address.Address, error) {
+	if tsk.IsEmpty() {
+		tsk = minerStateAPI.chain.ChainReader.GetHead()
+	}
+	ts, err := minerStateAPI.chain.ChainReader.GetTipSet(tsk)
+	if err != nil {
+		return nil, xerrors.Errorf("loading tipset %s: %v", tsk, err)
+	}
+
+	store := minerStateAPI.chain.State.Store(ctx)
+	state, err := state.LoadState(ctx, store, ts.Blocks()[0].ParentStateRoot)
+	if err != nil {
+		return nil, xerrors.Errorf("loading state: %v", err)
+	}
+
+	act, found, err := state.GetActor(ctx, power.Address)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to load power actor: %v", err)
+	}
+	if !found {
+		return nil, xerrors.Errorf("actor not found for %v", power.Address)
+	}
+
+	powState, err := power.Load(store, act)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to load power actor state: %v", err)
+	}
+
+	return powState.ListAllMiners()
+}
+
+func (minerStateAPI *MinerStateAPI) StateListActors(ctx context.Context, tsk block.TipSetKey) ([]address.Address, error) {
+	if tsk.IsEmpty() {
+		tsk = minerStateAPI.chain.ChainReader.GetHead()
+	}
+	st, err := minerStateAPI.chain.ChainReader.GetTipSetState(ctx, tsk)
+	if err != nil {
+		return nil, xerrors.Errorf("loading state: %v", err)
+	}
+
+	var out []address.Address
+	err = st.ForEach(func(addr state.ActorKey, act *types.Actor) error {
+		out = append(out, addr)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func (minerStateAPI *MinerStateAPI) StateMinerPower(ctx context.Context, addr address.Address, tsk block.TipSetKey) (*power.MinerPower, error) {
+	if tsk.IsEmpty() {
+		tsk = minerStateAPI.chain.ChainReader.GetHead()
+	}
+	ts, err := minerStateAPI.chain.ChainReader.GetTipSet(tsk)
+	if err != nil {
+		return nil, xerrors.Errorf("loading tipset %s: %v", tsk, err)
+	}
+
+	mp, net, hmp, err := getPower(ctx, minerStateAPI.chain, ts.Blocks()[0].ParentStateRoot, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &power.MinerPower{
+		MinerPower:  mp,
+		TotalPower:  net,
+		HasMinPower: hmp,
+	}, nil
+}
+
+func getPower(ctx context.Context, chain *ChainSubmodule, st cid.Cid, maddr address.Address) (power.Claim, power.Claim, bool, error) {
+	store := chain.State.Store(ctx)
+	state, err := state.LoadState(ctx, store, st)
+	if err != nil {
+		return power.Claim{}, power.Claim{}, false, xerrors.Errorf("loading state: %v", err)
+	}
+
+	act, found, err := state.GetActor(ctx, power.Address)
+	if err != nil {
+		return power.Claim{}, power.Claim{}, false, xerrors.Errorf("failed to load power actor: %v", err)
+	}
+	if !found {
+		return power.Claim{}, power.Claim{}, false, xerrors.Errorf("actor not found for %v", power.Address)
+	}
+
+	pas, err := power.Load(store, act)
+	if err != nil {
+		return power.Claim{}, power.Claim{}, false, err
+	}
+
+	tpow, err := pas.TotalPower()
+	if err != nil {
+		return power.Claim{}, power.Claim{}, false, err
+	}
+
+	var mpow power.Claim
+	var minpow bool
+	if maddr != address.Undef {
+		var found bool
+		mpow, found, err = pas.MinerPower(maddr)
+		if err != nil || !found {
+			// TODO: return an error when not found?
+			return power.Claim{}, power.Claim{}, false, err
+		}
+
+		minpow, err = pas.MinerNominalPowerMeetsConsensusMinimum(maddr)
+		if err != nil {
+			return power.Claim{}, power.Claim{}, false, err
+		}
+	}
+
+	return mpow, tpow, minpow, nil
+}
+
+func (minerStateAPI *MinerStateAPI) StateMinerAvailableBalance(ctx context.Context, maddr address.Address, tsk block.TipSetKey) (big.Int, error) {
+	if tsk.IsEmpty() {
+		tsk = minerStateAPI.chain.ChainReader.GetHead()
+	}
+	ts, err := minerStateAPI.chain.ChainReader.GetTipSet(tsk)
+	if err != nil {
+		return big.Int{}, xerrors.Errorf("loading tipset %s: %v", tsk, err)
+	}
+
+	store := minerStateAPI.chain.State.Store(ctx)
+	st, err := state.LoadState(ctx, store, ts.Blocks()[0].ParentStateRoot)
+	if err != nil {
+		return big.Int{}, xerrors.Errorf("loading state: %v", err)
+	}
+
+	act, found, err := st.GetActor(ctx, maddr)
+	if err != nil {
+		return big.Int{}, xerrors.Errorf("failed to load miner actor: %v", err)
+	}
+	if !found {
+		return big.Int{}, xerrors.Errorf("actor not found for %v", power.Address)
+	}
+
+	mas, err := miner.Load(store, act)
+	if err != nil {
+		return big.Int{}, xerrors.Errorf("failed to load miner actor state: %v", err)
+	}
+
+	vested, err := mas.VestedFunds(ts.EnsureHeight())
+	if err != nil {
+		return big.Int{}, err
+	}
+
+	abal, err := mas.AvailableBalance(act.Balance)
+	if err != nil {
+		return big.Int{}, err
+	}
+
+	return big.Add(abal, vested), nil
 }

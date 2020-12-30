@@ -29,6 +29,7 @@ import (
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	"github.com/filecoin-project/venus/pkg/net"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/power"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/filecoin-project/venus/pkg/vm"
 	"github.com/filecoin-project/venus/pkg/wallet"
@@ -84,6 +85,10 @@ type FullNode struct {
 	StateVMCirculatingSupplyInternal   func(context.Context, block.TipSetKey) (chain.CirculatingSupply, error)
 	StateCirculatingSupply             func(context.Context, block.TipSetKey) (abi.TokenAmount, error)
 	StateLookupID                      func(ctx context.Context, addr address.Address, tsk block.TipSetKey) (address.Address, error)
+	StateListMiners                    func(ctx context.Context, tsk block.TipSetKey) ([]address.Address, error)
+	StateMinerPower                    func(ctx context.Context, addr address.Address, tsk block.TipSetKey) (*power.MinerPower, error)
+	StateMinerAvailableBalance         func(ctx context.Context, maddr address.Address, tsk block.TipSetKey) (big.Int, error)
+	StateListActors                    func(ctx context.Context, tsk block.TipSetKey) ([]address.Address, error)
 
 	StateAccountKey func(context.Context, address.Address, block.TipSetKey) (address.Address, error)
 
@@ -240,6 +245,10 @@ type MinerStateAPI struct {
 	StateVMCirculatingSupplyInternal   func(context.Context, block.TipSetKey) (chain.CirculatingSupply, error)
 	StateCirculatingSupply             func(context.Context, block.TipSetKey) (abi.TokenAmount, error)
 	StateLookupID                      func(ctx context.Context, addr address.Address, tsk block.TipSetKey) (address.Address, error)
+	StateListMiners                    func(ctx context.Context, tsk block.TipSetKey) ([]address.Address, error)
+	StateMinerPower                    func(ctx context.Context, addr address.Address, tsk block.TipSetKey) (*power.MinerPower, error)
+	StateMinerAvailableBalance         func(ctx context.Context, maddr address.Address, tsk block.TipSetKey) (big.Int, error)
+	StateListActors                    func(ctx context.Context, tsk block.TipSetKey) ([]address.Address, error)
 }
 
 type AccountAPI struct {
