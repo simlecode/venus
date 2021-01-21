@@ -4,35 +4,42 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/filecoin-project/venus/pkg/types"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/ipfs/go-datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	bls "github.com/filecoin-project/filecoin-ffi"
+	"github.com/filecoin-project/venus/pkg/config"
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
+	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/filecoin-project/venus/pkg/wallet"
 )
 
-func TestWalletSimple(t *testing.T) {
-	tf.UnitTest(t)
-
+func newWalletAndDSBackend(t *testing.T) (*wallet.Wallet, *wallet.DSBackend) {
 	t.Log("create a backend")
 	ds := datastore.NewMapDatastore()
-	fs, err := wallet.NewDSBackend(ds)
+	fs, err := wallet.NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
 	t.Log("create a wallet with a single backend")
-	w := wallet.New(fs)
+	w := wallet.New(constants.TestPassword, fs)
 
 	t.Log("check backends")
 	assert.Len(t, w.Backends(wallet.DSBackendType), 1)
 
+	return w, fs
+}
+
+func TestWalletSimple(t *testing.T) {
+	tf.UnitTest(t)
+
+	w, fs := newWalletAndDSBackend(t)
+
 	t.Log("create a new address in the backend")
-	addr, err := fs.NewAddress(address.SECP256K1)
+	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
 	assert.NoError(t, err)
 
 	t.Log("test HasAddress")
@@ -54,7 +61,7 @@ func TestWalletSimple(t *testing.T) {
 	assert.Equal(t, list[0], addr)
 
 	t.Log("addresses are sorted")
-	addr2, err := fs.NewAddress(address.SECP256K1)
+	addr2, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
 	assert.NoError(t, err)
 
 	if bytes.Compare(addr2.Bytes(), addr.Bytes()) < 0 {
@@ -71,10 +78,7 @@ func TestWalletSimple(t *testing.T) {
 func TestWalletBLSKeys(t *testing.T) {
 	tf.UnitTest(t)
 
-	ds := datastore.NewMapDatastore()
-	wb, err := wallet.NewDSBackend(ds)
-	require.NoError(t, err)
-	w := wallet.New(wb)
+	w, wb := newWalletAndDSBackend(t)
 
 	addr, err := wallet.NewAddress(w, address.BLS)
 	require.NoError(t, err)
@@ -88,7 +92,7 @@ func TestWalletBLSKeys(t *testing.T) {
 	})
 
 	t.Run("key uses BLS cryptography", func(t *testing.T) {
-		ki, err := wb.GetKeyInfo(addr)
+		ki, err := wb.GetKeyInfoPassphrase(addr, constants.TestPassword)
 		require.NoError(t, err)
 		assert.Equal(t, crypto.SigTypeBLS, ki.SigType)
 	})
@@ -116,19 +120,10 @@ func TestWalletBLSKeys(t *testing.T) {
 func TestSimpleSignAndVerify(t *testing.T) {
 	tf.UnitTest(t)
 
-	t.Log("create a backend")
-	ds := datastore.NewMapDatastore()
-	fs, err := wallet.NewDSBackend(ds)
-	assert.NoError(t, err)
-
-	t.Log("create a wallet with a single backend")
-	w := wallet.New(fs)
-
-	t.Log("check backends")
-	assert.Len(t, w.Backends(wallet.DSBackendType), 1)
+	w, fs := newWalletAndDSBackend(t)
 
 	t.Log("create a new address in the backend")
-	addr, err := fs.NewAddress(address.SECP256K1)
+	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
 	assert.NoError(t, err)
 
 	t.Log("test HasAddress")
@@ -159,27 +154,13 @@ func TestSimpleSignAndVerify(t *testing.T) {
 func TestSignErrorCases(t *testing.T) {
 	tf.UnitTest(t)
 
-	t.Log("create 2 backends")
-	ds1 := datastore.NewMapDatastore()
-	fs1, err := wallet.NewDSBackend(ds1)
-	assert.NoError(t, err)
-
-	ds2 := datastore.NewMapDatastore()
-	fs2, err := wallet.NewDSBackend(ds2)
-	assert.NoError(t, err)
-
-	t.Log("create 2 wallets each with a backend")
-	w1 := wallet.New(fs1)
-	w2 := wallet.New(fs2)
-
-	t.Log("check backends")
-	assert.Len(t, w1.Backends(wallet.DSBackendType), 1)
-	assert.Len(t, w2.Backends(wallet.DSBackendType), 1)
+	w1, fs1 := newWalletAndDSBackend(t)
+	_, fs2 := newWalletAndDSBackend(t)
 
 	t.Log("create a new address each backend")
-	addr1, err := fs1.NewAddress(address.SECP256K1)
+	addr1, err := fs1.NewAddress(address.SECP256K1, constants.TestPassword)
 	assert.NoError(t, err)
-	addr2, err := fs2.NewAddress(address.SECP256K1)
+	addr2, err := fs2.NewAddress(address.SECP256K1, constants.TestPassword)
 	assert.NoError(t, err)
 
 	t.Log("test HasAddress")

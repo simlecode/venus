@@ -11,7 +11,6 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus/pkg/config"
 	"github.com/filecoin-project/venus/pkg/messagepool/gasguess"
-	"github.com/filecoin-project/venus/pkg/repo"
 	"github.com/filecoin-project/venus/pkg/wallet"
 
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
@@ -35,25 +34,13 @@ func TestRepubMessages(t *testing.T) {
 	}
 
 	// the actors
-	r1 := repo.NewInMemoryRepo()
-	backend1, err := wallet.NewDSBackend(r1.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w1 := wallet.New(backend1)
-
+	w1 := newWallet(t)
 	a1, err := wallet.NewAddress(w1, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	r2 := repo.NewInMemoryRepo()
-	backend2, err := wallet.NewDSBackend(r2.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w2 := wallet.New(backend2)
-
+	w2 := newWallet(t)
 	a2, err := wallet.NewAddress(w2, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)

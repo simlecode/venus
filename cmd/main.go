@@ -80,6 +80,8 @@ const (
 	Size = "size"
 
 	ImportSnapshot = "import-snapshot"
+
+	Password = "password"
 )
 
 func init() {

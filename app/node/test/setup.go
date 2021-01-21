@@ -46,6 +46,7 @@ func CreateBootstrapMiner(ctx context.Context, t *testing.T, seed *ChainSeed, ch
 		WithBuilderOpt(FakeProofVerifierBuilderOpts()...).
 		WithBuilderOpt(node.ChainClockConfigOption(chainClock)).
 		WithBuilderOpt(node.MonkeyPatchSetProofTypeOption(constants.DevRegisteredSealProof)).
+		WithBuilderOpt(node.SetPassword(constants.TestPassword)).
 		Build(ctx)
 
 	addr := seed.GiveKey(t, bootstrapMiner, 0)

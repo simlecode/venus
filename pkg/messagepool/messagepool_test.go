@@ -324,24 +324,34 @@ func mustAdd(t *testing.T, mp *MessagePool, msg *types.SignedMessage) {
 	}
 }
 
-func TestMessagePool(t *testing.T) {
-	tf.UnitTest(t)
-
-	tma := newTestMpoolAPI()
-
-	r := repo.NewInMemoryRepo()
-	backend, err := wallet.NewDSBackend(r.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w := wallet.New(backend)
-
+func newWalletAndMpool(t *testing.T, tma *testMpoolAPI) (*wallet.Wallet, *MessagePool) {
 	ds := datastore.NewMapDatastore()
 
 	mp, err := New(tma, ds, config.DefaultForkUpgradeParam, "mptest", nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	return newWallet(t), mp
+}
+
+func newWallet(t *testing.T) *wallet.Wallet {
+	r := repo.NewInMemoryRepo()
+	backend, err := wallet.NewDSBackend(r.WalletDatastore(), r.Config().Wallet.PassphraseConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := wallet.New(constants.TestPassword, backend)
+
+	return w
+}
+
+func TestMessagePool(t *testing.T) {
+	tf.UnitTest(t)
+
+	tma := newTestMpoolAPI()
+
+	w, mp := newWalletAndMpool(t, tma)
 
 	a := tma.nextBlock()
 
@@ -374,19 +384,7 @@ func TestMessagePoolMessagesInEachBlock(t *testing.T) {
 
 	tma := newTestMpoolAPI()
 
-	r := repo.NewInMemoryRepo()
-	backend, err := wallet.NewDSBackend(r.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w := wallet.New(backend)
-
-	ds := datastore.NewMapDatastore()
-
-	mp, err := New(tma, ds, config.DefaultForkUpgradeParam, "mptest", nil, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	w, mp := newWalletAndMpool(t, tma)
 
 	a := tma.nextBlock()
 
@@ -427,19 +425,7 @@ func TestRevertMessages(t *testing.T) {
 
 	tma := newTestMpoolAPI()
 
-	r := repo.NewInMemoryRepo()
-	backend, err := wallet.NewDSBackend(r.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w := wallet.New(backend)
-
-	ds := datastore.NewMapDatastore()
-
-	mp, err := New(tma, ds, config.DefaultForkUpgradeParam, "mptest", nil, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	w, mp := newWalletAndMpool(t, tma)
 
 	a := tma.nextBlock()
 	b := tma.nextBlock()
@@ -494,19 +480,7 @@ func TestPruningSimple(t *testing.T) {
 
 	tma := newTestMpoolAPI()
 
-	r := repo.NewInMemoryRepo()
-	backend, err := wallet.NewDSBackend(r.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w := wallet.New(backend)
-
-	ds := datastore.NewMapDatastore()
-
-	mp, err := New(tma, ds, config.DefaultForkUpgradeParam, "mptest", nil, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	w, mp := newWalletAndMpool(t, tma)
 
 	a := tma.nextBlock()
 	tma.applyBlock(t, a)
@@ -555,25 +529,13 @@ func TestLoadLocal(t *testing.T) {
 	}
 
 	// the actors
-	r1 := repo.NewInMemoryRepo()
-	backend1, err := wallet.NewDSBackend(r1.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w1 := wallet.New(backend1)
-
+	w1 := newWallet(t)
 	a1, err := wallet.NewAddress(w1, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	r2 := repo.NewInMemoryRepo()
-	backend2, err := wallet.NewDSBackend(r2.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w2 := wallet.New(backend2)
-
+	w2 := newWallet(t)
 	a2, err := wallet.NewAddress(w2, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
@@ -633,25 +595,13 @@ func TestClearAll(t *testing.T) {
 	}
 
 	// the actors
-	r1 := repo.NewInMemoryRepo()
-	backend1, err := wallet.NewDSBackend(r1.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w1 := wallet.New(backend1)
-
+	w1 := newWallet(t)
 	a1, err := wallet.NewAddress(w1, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	r2 := repo.NewInMemoryRepo()
-	backend2, err := wallet.NewDSBackend(r2.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w2 := wallet.New(backend2)
-
+	w2 := newWallet(t)
 	a2, err := wallet.NewAddress(w2, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
@@ -693,25 +643,13 @@ func TestClearNonLocal(t *testing.T) {
 	}
 
 	// the actors
-	r1 := repo.NewInMemoryRepo()
-	backend1, err := wallet.NewDSBackend(r1.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w1 := wallet.New(backend1)
-
+	w1 := newWallet(t)
 	a1, err := wallet.NewAddress(w1, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	r2 := repo.NewInMemoryRepo()
-	backend2, err := wallet.NewDSBackend(r2.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w2 := wallet.New(backend2)
-
+	w2 := newWallet(t)
 	a2, err := wallet.NewAddress(w2, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
@@ -760,25 +698,13 @@ func TestUpdates(t *testing.T) {
 	}
 
 	// the actors
-	r1 := repo.NewInMemoryRepo()
-	backend1, err := wallet.NewDSBackend(r1.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w1 := wallet.New(backend1)
-
+	w1 := newWallet(t)
 	a1, err := wallet.NewAddress(w1, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	r2 := repo.NewInMemoryRepo()
-	backend2, err := wallet.NewDSBackend(r2.WalletDatastore())
-	if err != nil {
-		t.Fatal(err)
-	}
-	w2 := wallet.New(backend2)
-
+	w2 := newWallet(t)
 	a2, err := wallet.NewAddress(w2, address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)

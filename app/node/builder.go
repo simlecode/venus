@@ -47,6 +47,7 @@ type Builder struct {
 	isRelay     bool
 	chainClock  clock.ChainEpochClock
 	genCid      cid.Cid
+	password    string
 }
 
 // BuilderOpt is an option for building a filecoin node.
@@ -159,6 +160,13 @@ func MonkeyPatchSetProofTypeOption(proofType abi.RegisteredSealProof) BuilderOpt
 	}
 }
 
+func SetPassword(password string) BuilderOpt {
+	return func(c *Builder) error {
+		c.password = password
+		return nil
+	}
+}
+
 // New creates a new node.
 func New(ctx context.Context, opts ...BuilderOpt) (*Node, error) {
 	// initialize builder and set base values
@@ -251,7 +259,7 @@ func (b *Builder) build(ctx context.Context) (*Node, error) {
 		return nil, errors.Wrap(err, "failed to build node.Syncer")
 	}
 
-	nd.wallet, err = wallet.NewWalletSubmodule(ctx, nd.configModule, b.repo, nd.chain)
+	nd.wallet, err = wallet.NewWalletSubmodule(ctx, nd.configModule, b.repo, b.password, nd.chain)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build node.wallet")
 	}

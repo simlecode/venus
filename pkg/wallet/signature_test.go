@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/filecoin-project/venus/pkg/config"
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
 )
@@ -24,10 +26,10 @@ import (
 
 func requireSignerAddr(t *testing.T) (*DSBackend, address.Address) {
 	ds := datastore.NewMapDatastore()
-	fs, err := NewDSBackend(ds)
+	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	require.NoError(t, err)
 
-	addr, err := fs.NewAddress(address.SECP256K1)
+	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
 	require.NoError(t, err)
 	return fs, addr
 }
@@ -40,7 +42,7 @@ func TestSignatureOk(t *testing.T) {
 	fs, addr := requireSignerAddr(t)
 
 	data := []byte("THESE BYTES WILL BE SIGNED")
-	sig, err := fs.SignBytes(data, addr)
+	sig, err := fs.SignBytesPassphrase(data, addr, constants.TestPassword)
 	require.NoError(t, err)
 
 	assert.NoError(t, crypto.ValidateSignature(data, addr, *sig))
@@ -63,7 +65,7 @@ func TestDataCorrupted(t *testing.T) {
 	fs, addr := requireSignerAddr(t)
 
 	data := []byte("THESE BYTES ARE SIGNED")
-	sig, err := fs.SignBytes(data, addr)
+	sig, err := fs.SignBytesPassphrase(data, addr, constants.TestPassword)
 	require.NoError(t, err)
 
 	corruptData := []byte("THESE BYTEZ ARE SIGNED")
@@ -78,10 +80,10 @@ func TestInvalidAddress(t *testing.T) {
 	fs, addr := requireSignerAddr(t)
 
 	data := []byte("THESE BYTES ARE SIGNED")
-	sig, err := fs.SignBytes(data, addr)
+	sig, err := fs.SignBytesPassphrase(data, addr, constants.TestPassword)
 	require.NoError(t, err)
 
-	badAddr, err := fs.NewAddress(address.SECP256K1)
+	badAddr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
 	require.NoError(t, err)
 
 	assert.Error(t, crypto.ValidateSignature(data, badAddr, *sig))
@@ -94,7 +96,7 @@ func TestSignatureCorrupted(t *testing.T) {
 	fs, addr := requireSignerAddr(t)
 
 	data := []byte("THESE BYTES ARE SIGNED")
-	sig, err := fs.SignBytes(data, addr)
+	sig, err := fs.SignBytesPassphrase(data, addr, constants.TestPassword)
 	require.NoError(t, err)
 	sig.Data[0] = sig.Data[0] ^ 0xFF // This operation ensures sig is modified
 

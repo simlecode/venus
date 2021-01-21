@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/filecoin-project/venus/pkg/constants"
+
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	cbor "github.com/ipfs/go-ipld-cbor"
 	"github.com/stretchr/testify/require"
@@ -40,9 +42,10 @@ func requireCommonDepsWithGifAndBlockstore(t *testing.T, gif genesis.InitFunc, r
 	chainStore, err := genesis.Init(context.Background(), r, bs, cst, gif)
 	require.NoError(t, err)
 	messageStore := chain.NewMessageStore(bs)
-	backend, err := wallet.NewDSBackend(r.WalletDatastore())
+
+	backend, err := wallet.NewDSBackend(r.WalletDatastore(), r.Config().Wallet.PassphraseConfig)
 	require.NoError(t, err)
-	wallet := wallet.New(backend)
+	wallet := wallet.New(constants.TestPassword, backend)
 	genBlk, err := chainStore.GetGenesisBlock(context.TODO())
 	require.NoError(t, err)
 	drand, err := beacon.DrandConfigSchedule(genBlk.Timestamp, r.Config().NetworkParams.BlockDelay, r.Config().NetworkParams.DrandSchedule)

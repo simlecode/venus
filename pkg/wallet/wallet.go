@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"golang.org/x/xerrors"
 	"reflect"
 	"sort"
 	"sync"
@@ -22,11 +21,13 @@ type Wallet struct {
 	lk sync.Mutex
 
 	backends map[reflect.Type][]Backend
+
+	password string
 }
 
 // New constructs a new wallet, that manages addresses in all the
 // passed in backends.
-func New(backends ...Backend) *Wallet {
+func New(password string, backends ...Backend) *Wallet {
 	backendsMap := make(map[reflect.Type][]Backend)
 
 	for _, backend := range backends {
@@ -36,6 +37,7 @@ func New(backends ...Backend) *Wallet {
 
 	return &Wallet{
 		backends: backendsMap,
+		password: password,
 	}
 }
 
@@ -102,7 +104,7 @@ func (w *Wallet) SignBytes(data []byte, addr address.Address) (*crypto.Signature
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not find address: %s", addr)
 	}
-	return backend.SignBytes(data, addr)
+	return backend.SignBytesPassphrase(data, addr, w.password)
 }
 
 // NewAddress creates a new account address on the default wallet backend.
@@ -113,7 +115,7 @@ func NewAddress(w *Wallet, p address.Protocol) (address.Address, error) {
 	}
 
 	backend := (backends[0]).(*DSBackend)
-	return backend.NewAddress(p)
+	return backend.NewAddress(p, w.password)
 }
 
 // GetPubKeyForAddress returns the public key in the keystore associated with
@@ -143,7 +145,7 @@ func (w *Wallet) keyInfoForAddr(addr address.Address) (*crypto.KeyInfo, error) {
 		return &crypto.KeyInfo{}, err
 	}
 
-	info, err := backend.GetKeyInfo(addr)
+	info, err := backend.GetKeyInfoPassphrase(addr, w.password)
 	if err != nil {
 		return &crypto.KeyInfo{}, err
 	}
@@ -164,7 +166,7 @@ func (w *Wallet) Import(kinfos ...*crypto.KeyInfo) ([]address.Address, error) {
 
 	var out []address.Address
 	for _, ki := range kinfos {
-		if err := imp.ImportKey(ki); err != nil {
+		if err := imp.ImportKey(ki, w.password); err != nil {
 			return nil, err
 		}
 
@@ -186,7 +188,7 @@ func (w *Wallet) Export(addrs []address.Address) ([]*crypto.KeyInfo, error) {
 			return nil, err
 		}
 
-		ki, err := bck.GetKeyInfo(addr)
+		ki, err := bck.GetKeyInfoPassphrase(addr, w.password)
 		if err != nil {
 			return nil, err
 		}
@@ -202,8 +204,23 @@ func (w *Wallet) WalletSign(ctx context.Context, addr address.Address, msg []byt
 		return nil, err
 	}
 	if ki == nil {
-		return nil, xerrors.Errorf("signing using key '%s': %w", addr.String(), ErrKeyInfoNotFound)
+		return nil, errors.Errorf("signing using key '%s': %v", addr.String(), ErrKeyInfoNotFound)
 	}
 
-	return ki.SignBytes(msg, addr)
+	return ki.SignBytesPassphrase(msg, addr, w.password)
+}
+
+func (w *Wallet) Password(ctx context.Context) string {
+	return w.password
+}
+
+func (w *Wallet) CheckPassword(ctx context.Context) bool {
+	for _, addr := range w.Addresses() {
+		_, err := w.keyInfoForAddr(addr)
+		if err != nil {
+			return false
+		}
+	}
+
+	return true
 }

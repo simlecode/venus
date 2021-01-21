@@ -3,11 +3,12 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/filecoin-project/venus/pkg/config"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/filecoin-project/venus/pkg/config"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	cmdhttp "github.com/ipfs/go-ipfs-cmds/http"

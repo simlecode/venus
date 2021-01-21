@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/hex"
@@ -11,11 +12,13 @@ import (
 	"github.com/filecoin-project/go-address"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
+	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/app/node"
 	"github.com/filecoin-project/venus/cmd/tablewriter"
 	"github.com/filecoin-project/venus/pkg/block"
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	"github.com/filecoin-project/venus/pkg/types"
 )
@@ -202,7 +205,7 @@ var balanceCmd = &cmds.Command{
 			return err
 		}
 
-		return re.Emit(bytes.NewBufferString((types.FIL)(balance).String()))
+		return printOneString(re, (types.FIL)(balance).String())
 	},
 }
 
@@ -242,26 +245,63 @@ var walletImportCmd = &cmds.Command{
 
 var walletExportCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("addr", true, true, "address of keys to export").EnableStdin(),
+		cmds.StringArg("addr", true, true, "address of key to export"),
+		cmds.FileArg(Password, true, false, "decrypt private key with password").EnableStdin(),
+	},
+	Options: []cmds.Option{
+		cmds.StringOption(constants.TestPassword, "The password used in the test"),
 	},
 	Run: func(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) error {
-		addrs := make([]address.Address, len(req.Arguments))
-		for i, arg := range req.Arguments {
-			addr, err := address.NewFromString(arg)
+		var addrs []address.Address
+		addr, err := address.NewFromString(req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		addrs = append(addrs, addr)
+
+		var kiBytes []byte
+		doExport := func() ([]byte, error) {
+			kis, err := env.(*node.Env).WalletAPI.WalletExport(addrs)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			addrs[i] = addr
+			return json.Marshal(kis[0])
 		}
 
-		kis, err := env.(*node.Env).WalletAPI.WalletExport(addrs)
+		testPW, _ := req.Options[constants.TestPassword].(string)
+		if len(testPW) != 0 {
+			if testPW != env.(*node.Env).WalletAPI.Password(req.Context) {
+				return xerrors.Errorf("test password not match, need %", constants.TestPassword)
+			}
+			if kiBytes, err = doExport(); err != nil {
+				return err
+			}
+			return printOneString(re, hex.EncodeToString(kiBytes))
+		}
+
+		iter := req.Files.Entries()
+		if !iter.Next() {
+			return fmt.Errorf("no file given: %s", iter.Err())
+		}
+
+		fi, ok := iter.Node().(files.File)
+		if !ok {
+			return fmt.Errorf("given file was not a files.File")
+		}
+
+		pw, err := bufio.NewReader(fi).ReadBytes('\n')
 		if err != nil {
 			return err
 		}
-		data, err := json.Marshal(kis[0])
-		if err != nil {
+
+		if string(pw) != env.(*node.Env).WalletAPI.Password(req.Context) {
+			return xerrors.Errorf("invalid password: %s", string(pw))
+		}
+
+		if kiBytes, err = doExport(); err != nil {
 			return err
 		}
-		return printOneString(re, hex.EncodeToString(data))
+
+		return printOneString(re, hex.EncodeToString(kiBytes))
 	},
 }

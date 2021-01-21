@@ -101,6 +101,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/pborman/uuid v1.2.0
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
@@ -120,6 +121,7 @@ require (
 	github.com/whyrusleeping/pubsub v0.0.0-20131020042734-02de8aa2db3d
 	go.opencensus.io v0.22.5
 	go.uber.org/zap v1.16.0
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/mod v0.3.1-0.20200828183125-ce943fd02449 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

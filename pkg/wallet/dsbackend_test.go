@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/filecoin-project/venus/pkg/config"
+	"github.com/filecoin-project/venus/pkg/constants"
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
 )
 
@@ -20,21 +22,21 @@ func TestDSBackendSimple(t *testing.T) {
 		require.NoError(t, ds.Close())
 	}()
 
-	fs, err := NewDSBackend(ds)
+	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
 	t.Log("empty address list on empty datastore")
 	assert.Len(t, fs.Addresses(), 0)
 
 	t.Log("can create new address")
-	addr, err := fs.NewAddress(address.SECP256K1)
+	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
 	assert.NoError(t, err)
 
 	t.Log("address is stored")
 	assert.True(t, fs.HasAddress(addr))
 
 	t.Log("address is stored in repo, and back when loading fresh in a new backend")
-	fs2, err := NewDSBackend(ds)
+	fs2, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
 	assert.True(t, fs2.HasAddress(addr))
@@ -48,18 +50,18 @@ func TestDSBackendKeyPairMatchAddress(t *testing.T) {
 		require.NoError(t, ds.Close())
 	}()
 
-	fs, err := NewDSBackend(ds)
+	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
 	t.Log("can create new address")
-	addr, err := fs.NewAddress(address.SECP256K1)
+	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
 	assert.NoError(t, err)
 
 	t.Log("address is stored")
 	assert.True(t, fs.HasAddress(addr))
 
 	t.Log("address references to a secret key")
-	ki, err := fs.GetKeyInfo(addr)
+	ki, err := fs.GetKeyInfoPassphrase(addr, constants.TestPassword)
 	assert.NoError(t, err)
 
 	dAddr, err := ki.Address()
@@ -77,18 +79,18 @@ func TestDSBackendErrorsForUnknownAddress(t *testing.T) {
 	defer func() {
 		require.NoError(t, ds1.Close())
 	}()
-	fs1, err := NewDSBackend(ds1)
+	fs1, err := NewDSBackend(ds1, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
 	ds2 := datastore.NewMapDatastore()
 	defer func() {
 		require.NoError(t, ds2.Close())
 	}()
-	fs2, err := NewDSBackend(ds2)
+	fs2, err := NewDSBackend(ds2, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
 	t.Log("can create new address in fs1")
-	addr, err := fs1.NewAddress(address.SECP256K1)
+	addr, err := fs1.NewAddress(address.SECP256K1, constants.TestPassword)
 	assert.NoError(t, err)
 
 	t.Log("address is stored fs1")
@@ -98,11 +100,11 @@ func TestDSBackendErrorsForUnknownAddress(t *testing.T) {
 	assert.False(t, fs2.HasAddress(addr))
 
 	t.Log("address references to a secret key in fs1")
-	_, err = fs1.GetKeyInfo(addr)
+	_, err = fs1.GetKeyInfoPassphrase(addr, constants.TestPassword)
 	assert.NoError(t, err)
 
 	t.Log("address does not references to a secret key in fs2")
-	_, err = fs2.GetKeyInfo(addr)
+	_, err = fs2.GetKeyInfoPassphrase(addr, constants.TestPassword)
 	assert.Error(t, err)
 	assert.Contains(t, "backend does not contain address", err.Error())
 
@@ -116,7 +118,7 @@ func TestDSBackendParallel(t *testing.T) {
 		require.NoError(t, ds.Close())
 	}()
 
-	fs, err := NewDSBackend(ds)
+	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
 	var wg sync.WaitGroup
@@ -124,7 +126,7 @@ func TestDSBackendParallel(t *testing.T) {
 	wg.Add(count)
 	for i := 0; i < count; i++ {
 		go func() {
-			_, err := fs.NewAddress(address.SECP256K1)
+			_, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
 			assert.NoError(t, err)
 			wg.Done()
 		}()

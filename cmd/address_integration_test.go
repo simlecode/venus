@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/filecoin-project/venus/pkg/crypto"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +17,8 @@ import (
 	"github.com/filecoin-project/venus/app/node/test"
 	"github.com/filecoin-project/venus/cmd"
 	"github.com/filecoin-project/venus/fixtures/fortest"
+	"github.com/filecoin-project/venus/pkg/constants"
+	"github.com/filecoin-project/venus/pkg/crypto"
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
 )
 
@@ -58,17 +59,17 @@ func TestWalletBalance(t *testing.T) {
 
 	t.Log("[success] not found, zero")
 	balance := cmdClient.RunSuccess(ctx, "wallet", "balance", addr.String()).ReadStdout()
-	assert.Equal(t, "0 FIL", balance)
+	assert.Equal(t, "0 FIL\n", balance)
 
 	t.Log("[success] balance 1394000000000000000000000000")
 	balance = cmdClient.RunSuccess(ctx, "wallet", "balance", builtin.RewardActorAddr.String()).ReadStdout()
-	assert.Equal(t, "1394000000 FIL", balance)
+	assert.Equal(t, "1394000000 FIL\n", balance)
 
 	t.Log("[success] newly generated one")
 	var addrNew cmd.AddressResult
 	cmdClient.RunSuccessFirstLine(ctx, "wallet", "new")
 	balance = cmdClient.RunSuccess(ctx, "wallet", "balance", addrNew.Address.String()).ReadStdout()
-	assert.Equal(t, "0 FIL", balance)
+	assert.Equal(t, "0 FIL\n", balance)
 }
 
 func TestWalletLoadFromFile(t *testing.T) {
@@ -94,8 +95,7 @@ func TestWalletLoadFromFile(t *testing.T) {
 
 	// assert default amount of funds were allocated to address during genesis
 	balance := cmdClient.RunSuccess(ctx, "wallet", "balance", fortest.TestAddresses[0].String()).ReadStdout()
-	assert.Equal(t, "0 FIL", balance)
-	//assert.Equal(t, "1000000 FIL", balance)
+	assert.Equal(t, "0 FIL\n", balance)
 }
 
 func TestWalletExportImportRoundTrip(t *testing.T) {
@@ -104,8 +104,11 @@ func TestWalletExportImportRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	builder := test.NewNodeBuilder(t)
 
-	_, cmdClient, done := builder.BuildAndStartAPI(ctx)
+	n, cmdClient, done := builder.BuildAndStartAPI(ctx)
 	defer done()
+
+	addr, err := n.Wallet().API().WalletNewAddress(address.SECP256K1)
+	require.NoError(t, err)
 
 	// ./venus wallet ls
 	// eg:
@@ -113,10 +116,10 @@ func TestWalletExportImportRoundTrip(t *testing.T) {
 	// t3wzm53n4ui4zdgwenf7jflrtsejgpsus7rswlkvbffxhdpkixpzfzidbvinrpnjx7dgvs72ilsnpiu7yjhela  0 FIL    0      X
 	result := cmdClient.RunSuccessLines(ctx, "wallet", "ls")
 	require.Len(t, result, 2) // include the header `Address Balance  Nonce  Default`
-
 	resultAddr := strings.Split(result[1], " ")[0]
+	require.Equal(t, addr.String(), resultAddr)
 
-	exportJSON := cmdClient.RunSuccess(ctx, "wallet", "export", resultAddr).ReadStdoutTrimNewlines()
+	exportJSON := cmdClient.RunSuccess(ctx, "wallet", "export", resultAddr, os.Stdin.Name(), fmt.Sprintf("--%s=%s", constants.TestPassword, constants.TestPassword)).ReadStdoutTrimNewlines()
 	data, err := hex.DecodeString(exportJSON)
 	require.NoError(t, err)
 	var exportResult crypto.KeyInfo

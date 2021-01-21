@@ -57,7 +57,7 @@ func (walletAPI *WalletAPI) WalletDefaultAddress() (address.Address, error) {
 		return addr, nil
 	}
 
-	return address.Undef, ErrNoDefaultFromAddress
+	return address.Undef, nil
 }
 
 // WalletAddresses gets addresses from the walletModule
@@ -130,4 +130,8 @@ func (walletAPI *WalletAPI) WalletSignMessage(ctx context.Context, k address.Add
 		Message:   *msg,
 		Signature: *sig,
 	}, nil
+}
+
+func (walletAPI *WalletAPI) Password(ctx context.Context) string {
+	return walletAPI.walletModule.Wallet.Password(ctx)
 }

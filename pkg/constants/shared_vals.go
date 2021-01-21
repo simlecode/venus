@@ -55,3 +55,5 @@ const Finality = policy.ChainFinality
 
 // Epochs
 const MessageConfidence = abi.ChainEpoch(5)
+
+const TestPassword = "test-password"
