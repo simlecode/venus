@@ -4,15 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/filecoin-project/go-address"
+	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
 	"github.com/ipfs/go-datastore"
 
-	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
-
-	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus/pkg/config"
 	"github.com/filecoin-project/venus/pkg/messagepool/gasguess"
-	"github.com/filecoin-project/venus/pkg/wallet"
-
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
 )
 
@@ -35,13 +32,13 @@ func TestRepubMessages(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}

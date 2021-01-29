@@ -1,17 +1,14 @@
 package wallet
 
 import (
-	"bytes"
 	"crypto/rand"
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/filecoin-project/go-address"
 	ds "github.com/ipfs/go-datastore"
 	dsq "github.com/ipfs/go-datastore/query"
-	gocache "github.com/patrickmn/go-cache"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 
@@ -20,18 +17,8 @@ import (
 	"github.com/filecoin-project/venus/pkg/repo"
 )
 
-const (
-	cacheExpiration      = time.Hour * 5
-	cacheCleanupInterval = time.Hour * 3
-)
-
 // DSBackendType is the reflect type of the DSBackend.
 var DSBackendType = reflect.TypeOf(&DSBackend{})
-
-type cache struct {
-	addressCache map[address.Address]struct{}
-	keyInfoCache *gocache.Cache
-}
 
 // DSBackend is a wallet backend implementation for storing addresses in a datastore.
 type DSBackend struct {
@@ -40,9 +27,13 @@ type DSBackend struct {
 	// TODO: use a better interface that supports time locks, encryption, etc.
 	ds repo.Datastore
 
-	cache *cache
+	cache map[address.Address]struct{}
+
+	unLocked map[address.Address]*crypto.KeyInfo
 
 	PassphraseConf config.PassphraseConfig
+
+	password string
 }
 
 var _ Backend = (*DSBackend)(nil)
@@ -70,21 +61,17 @@ func NewDSBackend(ds repo.Datastore, passphraseCfg config.PassphraseConfig) (*DS
 		addrCache[parsedAddr] = struct{}{}
 	}
 
-	kiCache := gocache.New(cacheExpiration, cacheCleanupInterval)
-
 	return &DSBackend{
-		ds: ds,
-		cache: &cache{
-			addressCache: addrCache,
-			keyInfoCache: kiCache,
-		},
+		ds:             ds,
+		cache:          addrCache,
 		PassphraseConf: passphraseCfg,
+		unLocked:       make(map[address.Address]*crypto.KeyInfo),
 	}, nil
 }
 
 // ImportKey loads the address in `ai` and KeyInfo `ki` into the backend
-func (backend *DSBackend) ImportKey(ki *crypto.KeyInfo, password string) error {
-	return backend.putKeyInfoPassphrase(ki, password)
+func (backend *DSBackend) ImportKey(ki *crypto.KeyInfo) error {
+	return backend.putKeyInfo(ki)
 }
 
 // Addresses returns a list of all addresses that are stored in this backend.
@@ -93,7 +80,7 @@ func (backend *DSBackend) Addresses() []address.Address {
 	defer backend.lk.RUnlock()
 
 	var cpy []address.Address
-	for addr := range backend.cache.addressCache {
+	for addr := range backend.cache {
 		cpy = append(cpy, addr)
 	}
 	return cpy
@@ -105,42 +92,42 @@ func (backend *DSBackend) HasAddress(addr address.Address) bool {
 	backend.lk.RLock()
 	defer backend.lk.RUnlock()
 
-	_, ok := backend.cache.addressCache[addr]
+	_, ok := backend.cache[addr]
 	return ok
 }
 
 // NewAddress creates a new address and stores it.
 // Safe for concurrent access.
-func (backend *DSBackend) NewAddress(protocol address.Protocol, password string) (address.Address, error) {
+func (backend *DSBackend) NewAddress(protocol address.Protocol) (address.Address, error) {
 	switch protocol {
 	case address.BLS:
-		return backend.newBLSAddress(password)
+		return backend.newBLSAddress()
 	case address.SECP256K1:
-		return backend.newSecpAddress(password)
+		return backend.newSecpAddress()
 	default:
 		return address.Undef, errors.Errorf("Unknown address protocol %d", protocol)
 	}
 }
 
-func (backend *DSBackend) newSecpAddress(password string) (address.Address, error) {
+func (backend *DSBackend) newSecpAddress() (address.Address, error) {
 	ki, err := crypto.NewSecpKeyFromSeed(rand.Reader)
 	if err != nil {
 		return address.Undef, err
 	}
 
-	if err := backend.putKeyInfoPassphrase(&ki, password); err != nil {
+	if err := backend.putKeyInfo(&ki); err != nil {
 		return address.Undef, err
 	}
 	return ki.Address()
 }
 
-func (backend *DSBackend) newBLSAddress(password string) (address.Address, error) {
+func (backend *DSBackend) newBLSAddress() (address.Address, error) {
 	ki, err := crypto.NewBLSKeyFromSeed(rand.Reader)
 	if err != nil {
 		return address.Undef, err
 	}
 
-	if err := backend.putKeyInfoPassphrase(&ki, password); err != nil {
+	if err := backend.putKeyInfo(&ki); err != nil {
 		return address.Undef, err
 	}
 	return ki.Address()
@@ -152,28 +139,36 @@ func (backend *DSBackend) putKeyInfo(ki *crypto.KeyInfo) error {
 		return err
 	}
 
-	backend.lk.Lock()
-	defer backend.lk.Unlock()
+	backend.lk.RLock()
+	defer backend.lk.RUnlock()
 
-	buf := new(bytes.Buffer)
-	err = ki.MarshalCBOR(buf)
+	key := &Key{
+		ID:      uuid.NewRandom(),
+		Address: addr,
+		KeyInfo: ki,
+	}
+
+	keyJSON, err := encryptKey(key, backend.password, backend.PassphraseConf.ScryptN, backend.PassphraseConf.ScryptP)
 	if err != nil {
 		return err
 	}
 
-	if err := backend.ds.Put(ds.NewKey(addr.String()), buf.Bytes()); err != nil {
-		return errors.Wrap(err, "failed to store new address")
+	if err := backend.ds.Put(ds.NewKey(key.Address.String()), keyJSON); err != nil {
+		return errors.Wrapf(err, "failed to store new address: %s", key.Address.String())
 	}
+	backend.cache[addr] = struct{}{}
+	backend.unLocked[addr] = ki
 
-	backend.cache.addressCache[addr] = struct{}{}
 	return nil
 }
 
 // SignBytes cryptographically signs `data` using the private key `priv`.
 func (backend *DSBackend) SignBytes(data []byte, addr address.Address) (*crypto.Signature, error) {
-	ki, err := backend.GetKeyInfo(addr)
-	if err != nil {
-		return nil, err
+	backend.lk.RLock()
+	defer backend.lk.RUnlock()
+	ki, ok := backend.unLocked[addr]
+	if !ok {
+		return nil, errors.Errorf("%s is locked", addr.String())
 	}
 	return crypto.Sign(data, ki.PrivateKey, ki.SigType)
 }
@@ -185,18 +180,12 @@ func (backend *DSBackend) GetKeyInfo(addr address.Address) (*crypto.KeyInfo, err
 		return nil, errors.New("backend does not contain address")
 	}
 
-	// kib is a cbor of crypto.KeyInfo
-	kib, err := backend.ds.Get(ds.NewKey(addr.String()))
+	key, err := backend.getKey(addr, backend.password)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch private key from backend")
+		return nil, err
 	}
 
-	ki := &crypto.KeyInfo{}
-	if err := ki.UnmarshalCBOR(bytes.NewReader(kib)); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal keyinfo from backend")
-	}
-
-	return ki, nil
+	return key.KeyInfo, nil
 }
 
 func (backend *DSBackend) GetKeyInfoPassphrase(addr address.Address, password string) (*crypto.KeyInfo, error) {
@@ -204,19 +193,10 @@ func (backend *DSBackend) GetKeyInfoPassphrase(addr address.Address, password st
 		return nil, errors.New("backend does not contain address")
 	}
 
-	if cache, ok := backend.cache.keyInfoCache.Get(addr.String()); ok {
-		if ki, ok := cache.(*crypto.KeyInfo); ok {
-			return ki, nil
-		}
-		backend.cache.keyInfoCache.Delete(addr.String())
-	}
-
 	key, err := backend.getKey(addr, password)
 	if err != nil {
 		return nil, err
 	}
-
-	backend.cache.keyInfoCache.Set(addr.String(), key.KeyInfo, cacheExpiration)
 
 	return key.KeyInfo, nil
 }
@@ -230,40 +210,73 @@ func (backend *DSBackend) getKey(addr address.Address, password string) (*Key, e
 	return decryptKey(b, password)
 }
 
-func (backend *DSBackend) putKeyInfoPassphrase(ki *crypto.KeyInfo, password string) error {
-	addr, err := ki.Address()
-	if err != nil {
-		return err
+func (backend *DSBackend) setPassword(password string) {
+	backend.password = password
+}
+
+func (backend *DSBackend) clearPassword() {
+	backend.password = ""
+}
+
+func (backend *DSBackend) IsLocked() bool {
+	return len(backend.password) == 0
+}
+
+func (backend *DSBackend) Locked(password string) error {
+	backend.lk.RLock()
+	defer backend.lk.RUnlock()
+
+	if backend.IsLocked() {
+		return nil
 	}
 
-	backend.lk.Lock()
-	defer backend.lk.Unlock()
-
-	key := &Key{
-		ID:      uuid.NewRandom(),
-		Address: addr,
-		KeyInfo: ki,
+	if backend.password != password {
+		return errors.Errorf("invalid password: %s", password)
 	}
 
-	keyJSON, err := encryptKey(key, password, backend.PassphraseConf.ScryptN, backend.PassphraseConf.ScryptP)
-	if err != nil {
-		return err
+	for addr := range backend.unLocked {
+		delete(backend.unLocked, addr)
 	}
+	// remove password
+	backend.clearPassword()
 
-	if err := backend.ds.Put(ds.NewKey(key.Address.String()), keyJSON); err != nil {
-		return errors.Wrapf(err, "failed to store new address: %s", key.Address.String())
-	}
-
-	backend.cache.addressCache[addr] = struct{}{}
-	backend.cache.keyInfoCache.Set(addr.String(), ki, cacheExpiration)
 	return nil
 }
 
-// SignBytesPassphrase cryptographically signs `data` using the private key `priv`.
-func (backend *DSBackend) SignBytesPassphrase(data []byte, addr address.Address, password string) (*crypto.Signature, error) {
-	ki, err := backend.GetKeyInfoPassphrase(addr, password)
-	if err != nil {
-		return nil, err
+func (backend *DSBackend) UnLocked(password string) error {
+	backend.lk.RLock()
+	defer backend.lk.RUnlock()
+
+	if !backend.IsLocked() {
+		return nil
 	}
-	return crypto.Sign(data, ki.PrivateKey, ki.SigType)
+
+	if len(backend.Addresses()) == 0 {
+		backend.setPassword(password)
+		return nil
+	}
+
+	for _, addr := range backend.Addresses() {
+		ki, err := backend.GetKeyInfoPassphrase(addr, password)
+		if err != nil {
+			return err
+		}
+
+		backend.unLocked[addr] = ki
+	}
+	backend.setPassword(password)
+
+	return nil
+}
+
+func (backend *DSBackend) UnLockedList() ([]address.Address, error) {
+	backend.lk.RLock()
+	defer backend.lk.RUnlock()
+
+	addrs := make([]address.Address, 0, len(backend.unLocked))
+	for addr := range backend.unLocked {
+		addrs = append(addrs, addr)
+	}
+
+	return addrs, nil
 }

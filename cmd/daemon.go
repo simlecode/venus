@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -12,7 +11,6 @@ import (
 	"net/url"
 	"os"
 
-	files "github.com/ipfs/go-ipfs-files"
 	"golang.org/x/xerrors"
 
 	_ "net/http/pprof" // nolint: golint
@@ -30,7 +28,6 @@ import (
 	"github.com/filecoin-project/venus/fixtures/networks"
 	"github.com/filecoin-project/venus/pkg/block"
 	"github.com/filecoin-project/venus/pkg/config"
-	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/genesis"
 	"github.com/filecoin-project/venus/pkg/journal"
 	"github.com/filecoin-project/venus/pkg/repo"
@@ -48,9 +45,6 @@ var daemonCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Initialize a venus repo, Start a long-running daemon process",
 	},
-	Arguments: []cmds.Argument{
-		cmds.FileArg(Password, true, false, "use password to encrypt private key").EnableStdin(),
-	},
 	Options: []cmds.Option{
 		cmds.StringOption(makeGenFlag, "make genesis"),
 		cmds.StringOption(preTemplateFlag, "template for make genesis"),
@@ -64,7 +58,6 @@ var daemonCmd = &cmds.Command{
 		cmds.StringOption(PeerKeyFile, "path of file containing key to use for new node's libp2p identity"),
 		cmds.StringOption(WalletKeyFile, "path of file containing keys to import into the wallet on initialization"),
 		cmds.StringOption(Network, "when set, populates config with network specific parameters").WithDefault("testnetnet"),
-		cmds.BoolOption(constants.TestPassword, "use test password"),
 	},
 	Run: func(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) error {
 		repoDir, _ := req.Options[OptionRepoDir].(string)
@@ -184,13 +177,6 @@ func daemonRun(req *cmds.Request, re cmds.ResponseEmitter) error {
 		return err
 	}
 
-	password, err := getPassword(req, re)
-	if err != nil {
-		log.Errorf("failed to get password: %s", err.Error())
-		return err
-	}
-	opts = append(opts, node.SetPassword(password))
-
 	if offlineMode, ok := req.Options[OfflineMode].(bool); ok {
 		opts = append(opts, node.OfflineMode(offlineMode))
 	}
@@ -264,33 +250,6 @@ func getRepo(req *cmds.Request) (repo.Repo, error) {
 		return nil, err
 	}
 	return repo.OpenFSRepo(repoDir, repo.Version)
-}
-
-func getPassword(req *cmds.Request, re cmds.ResponseEmitter) (string, error) {
-	_, ok := req.Options[constants.TestPassword].(bool)
-	if ok {
-		return constants.TestPassword, nil
-	}
-	if err := printOneString(re, "please enter password."); err != nil {
-		return "", err
-	}
-
-	iter := req.Files.Entries()
-	if !iter.Next() {
-		return "", fmt.Errorf("no file given: %s", iter.Err())
-	}
-
-	fi, ok := iter.Node().(files.File)
-	if !ok {
-		return "", fmt.Errorf("given file was not a files.File")
-	}
-
-	pwBytes, err := bufio.NewReader(fi).ReadBytes('\n')
-	if err != nil {
-		return "", err
-	}
-
-	return string(pwBytes), nil
 }
 
 func setConfigFromOptions(cfg *config.Config, network string) error {

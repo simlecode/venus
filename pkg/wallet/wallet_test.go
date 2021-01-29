@@ -1,4 +1,4 @@
-package wallet_test
+package wallet
 
 import (
 	"bytes"
@@ -11,24 +11,25 @@ import (
 
 	bls "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/venus/pkg/config"
-	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
 	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/wallet"
 )
 
-func newWalletAndDSBackend(t *testing.T) (*wallet.Wallet, *wallet.DSBackend) {
+func newWalletAndDSBackend(t *testing.T) (*Wallet, *DSBackend) {
 	t.Log("create a backend")
 	ds := datastore.NewMapDatastore()
-	fs, err := wallet.NewDSBackend(ds, config.DefaultPassphraseConfig())
+	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
+	assert.NoError(t, err)
+
+	err = fs.UnLocked(TestPassword)
 	assert.NoError(t, err)
 
 	t.Log("create a wallet with a single backend")
-	w := wallet.New(constants.TestPassword, fs)
+	w := New(fs)
 
 	t.Log("check backends")
-	assert.Len(t, w.Backends(wallet.DSBackendType), 1)
+	assert.Len(t, w.Backends(DSBackendType), 1)
 
 	return w, fs
 }
@@ -39,7 +40,7 @@ func TestWalletSimple(t *testing.T) {
 	w, fs := newWalletAndDSBackend(t)
 
 	t.Log("create a new address in the backend")
-	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
+	addr, err := fs.NewAddress(address.SECP256K1)
 	assert.NoError(t, err)
 
 	t.Log("test HasAddress")
@@ -61,7 +62,7 @@ func TestWalletSimple(t *testing.T) {
 	assert.Equal(t, list[0], addr)
 
 	t.Log("addresses are sorted")
-	addr2, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
+	addr2, err := fs.NewAddress(address.SECP256K1)
 	assert.NoError(t, err)
 
 	if bytes.Compare(addr2.Bytes(), addr.Bytes()) < 0 {
@@ -80,7 +81,7 @@ func TestWalletBLSKeys(t *testing.T) {
 
 	w, wb := newWalletAndDSBackend(t)
 
-	addr, err := wallet.NewAddress(w, address.BLS)
+	addr, err := w.NewAddress(address.BLS)
 	require.NoError(t, err)
 
 	data := []byte("data to be signed")
@@ -92,7 +93,7 @@ func TestWalletBLSKeys(t *testing.T) {
 	})
 
 	t.Run("key uses BLS cryptography", func(t *testing.T) {
-		ki, err := wb.GetKeyInfoPassphrase(addr, constants.TestPassword)
+		ki, err := wb.GetKeyInfo(addr)
 		require.NoError(t, err)
 		assert.Equal(t, crypto.SigTypeBLS, ki.SigType)
 	})
@@ -123,7 +124,7 @@ func TestSimpleSignAndVerify(t *testing.T) {
 	w, fs := newWalletAndDSBackend(t)
 
 	t.Log("create a new address in the backend")
-	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
+	addr, err := fs.NewAddress(address.SECP256K1)
 	assert.NoError(t, err)
 
 	t.Log("test HasAddress")
@@ -158,9 +159,9 @@ func TestSignErrorCases(t *testing.T) {
 	_, fs2 := newWalletAndDSBackend(t)
 
 	t.Log("create a new address each backend")
-	addr1, err := fs1.NewAddress(address.SECP256K1, constants.TestPassword)
+	addr1, err := fs1.NewAddress(address.SECP256K1)
 	assert.NoError(t, err)
-	addr2, err := fs2.NewAddress(address.SECP256K1, constants.TestPassword)
+	addr2, err := fs2.NewAddress(address.SECP256K1)
 	assert.NoError(t, err)
 
 	t.Log("test HasAddress")

@@ -19,8 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/venus/pkg/constants"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/ipfs/go-cid"
 	ma "github.com/multiformats/go-multiaddr"
@@ -710,9 +708,7 @@ func NewDaemon(t *testing.T, options ...func(*TestDaemon)) *TestDaemon {
 	swarmAddr := "/ip4/127.0.0.1/tcp/0"
 	swarmListenFlag := fmt.Sprintf("--swarmlisten=%s", swarmAddr)
 
-	testPasswordFlag := fmt.Sprintf("--%s", constants.TestPassword)
-
-	td.daemonArgs = []string{filecoinBin, "daemon", os.Stdin.Name(), repoDirFlag, cmdAPIAddrFlag, swarmListenFlag, testPasswordFlag}
+	td.daemonArgs = []string{filecoinBin, "daemon", repoDirFlag, cmdAPIAddrFlag, swarmListenFlag}
 
 	if td.init {
 		t.Log("run: venus need init ...")

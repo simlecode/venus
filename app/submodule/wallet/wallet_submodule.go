@@ -29,7 +29,7 @@ type walletRepo interface {
 // NewWalletSubmodule creates a new storage protocol submodule.
 func NewWalletSubmodule(ctx context.Context,
 	cfg *config.ConfigModule,
-	repo walletRepo, password string,
+	repo walletRepo,
 	chain *chain.ChainSubmodule) (*WalletSubmodule, error) {
 	passphraseCfg, err := getPassphraseConfig(cfg)
 	if err != nil {
@@ -39,10 +39,7 @@ func NewWalletSubmodule(ctx context.Context,
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set up walletModule backend")
 	}
-	fcWallet := wallet.New(password, backend)
-	if !fcWallet.CheckPassword(ctx) {
-		return nil, errors.Errorf("cannot decrypt private key: %s", password)
-	}
+	fcWallet := wallet.New(backend)
 
 	return &WalletSubmodule{
 		Config: cfg,

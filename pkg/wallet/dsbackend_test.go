@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/filecoin-project/venus/pkg/config"
-	"github.com/filecoin-project/venus/pkg/constants"
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
 )
 
@@ -25,11 +24,14 @@ func TestDSBackendSimple(t *testing.T) {
 	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
+	err = fs.UnLocked(TestPassword)
+	assert.NoError(t, err)
+
 	t.Log("empty address list on empty datastore")
 	assert.Len(t, fs.Addresses(), 0)
 
 	t.Log("can create new address")
-	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
+	addr, err := fs.NewAddress(address.SECP256K1)
 	assert.NoError(t, err)
 
 	t.Log("address is stored")
@@ -53,15 +55,18 @@ func TestDSBackendKeyPairMatchAddress(t *testing.T) {
 	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
+	err = fs.UnLocked(TestPassword)
+	assert.NoError(t, err)
+
 	t.Log("can create new address")
-	addr, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
+	addr, err := fs.NewAddress(address.SECP256K1)
 	assert.NoError(t, err)
 
 	t.Log("address is stored")
 	assert.True(t, fs.HasAddress(addr))
 
 	t.Log("address references to a secret key")
-	ki, err := fs.GetKeyInfoPassphrase(addr, constants.TestPassword)
+	ki, err := fs.GetKeyInfo(addr)
 	assert.NoError(t, err)
 
 	dAddr, err := ki.Address()
@@ -82,6 +87,9 @@ func TestDSBackendErrorsForUnknownAddress(t *testing.T) {
 	fs1, err := NewDSBackend(ds1, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
+	err = fs1.UnLocked(TestPassword)
+	assert.NoError(t, err)
+
 	ds2 := datastore.NewMapDatastore()
 	defer func() {
 		require.NoError(t, ds2.Close())
@@ -89,8 +97,11 @@ func TestDSBackendErrorsForUnknownAddress(t *testing.T) {
 	fs2, err := NewDSBackend(ds2, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
+	err = fs2.UnLocked(TestPassword)
+	assert.NoError(t, err)
+
 	t.Log("can create new address in fs1")
-	addr, err := fs1.NewAddress(address.SECP256K1, constants.TestPassword)
+	addr, err := fs1.NewAddress(address.SECP256K1)
 	assert.NoError(t, err)
 
 	t.Log("address is stored fs1")
@@ -100,11 +111,11 @@ func TestDSBackendErrorsForUnknownAddress(t *testing.T) {
 	assert.False(t, fs2.HasAddress(addr))
 
 	t.Log("address references to a secret key in fs1")
-	_, err = fs1.GetKeyInfoPassphrase(addr, constants.TestPassword)
+	_, err = fs1.GetKeyInfo(addr)
 	assert.NoError(t, err)
 
 	t.Log("address does not references to a secret key in fs2")
-	_, err = fs2.GetKeyInfoPassphrase(addr, constants.TestPassword)
+	_, err = fs2.GetKeyInfo(addr)
 	assert.Error(t, err)
 	assert.Contains(t, "backend does not contain address", err.Error())
 
@@ -121,12 +132,15 @@ func TestDSBackendParallel(t *testing.T) {
 	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
+	err = fs.UnLocked(TestPassword)
+	assert.NoError(t, err)
+
 	var wg sync.WaitGroup
 	count := 10
 	wg.Add(count)
 	for i := 0; i < count; i++ {
 		go func() {
-			_, err := fs.NewAddress(address.SECP256K1, constants.TestPassword)
+			_, err := fs.NewAddress(address.SECP256K1)
 			assert.NoError(t, err)
 			wg.Done()
 		}()

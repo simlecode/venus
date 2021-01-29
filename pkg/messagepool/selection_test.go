@@ -85,13 +85,13 @@ func TestMessageChains(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,13 +317,13 @@ func TestMessageChainSkipping(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,13 +387,13 @@ func TestBasicMessageSelection(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -525,13 +525,13 @@ func TestMessageSelectionTrimming(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -582,13 +582,13 @@ func TestPriorityMessageSelection(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -655,13 +655,13 @@ func TestPriorityMessageSelection2(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -718,13 +718,13 @@ func TestPriorityMessageSelection3(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -809,13 +809,13 @@ func TestOptimalMessageSelection1(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -870,13 +870,13 @@ func TestOptimalMessageSelection2(t *testing.T) {
 
 	// the actors
 	w1 := newWallet(t)
-	a1, err := wallet.NewAddress(w1, address.SECP256K1)
+	a1, err := w1.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	w2 := newWallet(t)
-	a2, err := wallet.NewAddress(w2, address.SECP256K1)
+	a2, err := w2.NewAddress(address.SECP256K1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -949,7 +949,7 @@ func TestOptimalMessageSelection3(t *testing.T) {
 	for i := 0; i < nActors; i++ {
 		w := newWallet(t)
 
-		a, err := wallet.NewAddress(w, address.SECP256K1)
+		a, err := w.NewAddress(address.SECP256K1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1026,7 +1026,7 @@ func testCompetitiveMessageSelection(t *testing.T, rng *rand.Rand, getPremium fu
 	for i := 0; i < nActors; i++ {
 		w := newWallet(t)
 
-		a, err := wallet.NewAddress(w, address.SECP256K1)
+		a, err := w.NewAddress(address.SECP256K1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1312,7 +1312,7 @@ readLoop:
 		if !ok {
 			w := newWallet(t)
 
-			a, err := wallet.NewAddress(w, address.SECP256K1)
+			a, err := w.NewAddress(address.SECP256K1)
 			if err != nil {
 				t.Fatal(err)
 			}

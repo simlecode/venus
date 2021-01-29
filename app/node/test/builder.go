@@ -8,7 +8,6 @@ import (
 
 	"github.com/filecoin-project/venus/app/node"
 	"github.com/filecoin-project/venus/pkg/config"
-	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/genesis"
 	"github.com/filecoin-project/venus/pkg/repo"
 	gengen "github.com/filecoin-project/venus/tools/gengen/util"
@@ -93,8 +92,6 @@ func (b *NodeBuilder) Build(ctx context.Context) *node.Node {
 	// Initialize the node.
 	repoConfigOpts, err := node.OptionsFromRepo(repo)
 	b.requireNoError(err)
-
-	b.builderOpts = append(b.builderOpts, node.SetPassword(constants.TestPassword))
 
 	nd, err := node.New(ctx, append(repoConfigOpts, b.builderOpts...)...)
 	b.requireNoError(err)

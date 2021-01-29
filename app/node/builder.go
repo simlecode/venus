@@ -2,17 +2,14 @@ package node
 
 import (
 	"context"
-	"github.com/filecoin-project/venus/pkg/constants"
 	"time"
-
-	"github.com/filecoin-project/venus/pkg/jwtauth"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p"
 	"github.com/pkg/errors"
+	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus/app/submodule/blockservice"
 	"github.com/filecoin-project/venus/app/submodule/blockstore"
@@ -27,7 +24,9 @@ import (
 	"github.com/filecoin-project/venus/app/submodule/wallet"
 	"github.com/filecoin-project/venus/pkg/clock"
 	"github.com/filecoin-project/venus/pkg/config"
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/journal"
+	"github.com/filecoin-project/venus/pkg/jwtauth"
 	"github.com/filecoin-project/venus/pkg/repo"
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/util"
@@ -47,7 +46,6 @@ type Builder struct {
 	isRelay     bool
 	chainClock  clock.ChainEpochClock
 	genCid      cid.Cid
-	password    string
 }
 
 // BuilderOpt is an option for building a filecoin node.
@@ -160,13 +158,6 @@ func MonkeyPatchSetProofTypeOption(proofType abi.RegisteredSealProof) BuilderOpt
 	}
 }
 
-func SetPassword(password string) BuilderOpt {
-	return func(c *Builder) error {
-		c.password = password
-		return nil
-	}
-}
-
 // New creates a new node.
 func New(ctx context.Context, opts ...BuilderOpt) (*Node, error) {
 	// initialize builder and set base values
@@ -259,7 +250,7 @@ func (b *Builder) build(ctx context.Context) (*Node, error) {
 		return nil, errors.Wrap(err, "failed to build node.Syncer")
 	}
 
-	nd.wallet, err = wallet.NewWalletSubmodule(ctx, nd.configModule, b.repo, b.password, nd.chain)
+	nd.wallet, err = wallet.NewWalletSubmodule(ctx, nd.configModule, b.repo, nd.chain)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build node.wallet")
 	}

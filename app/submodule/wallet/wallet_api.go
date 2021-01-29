@@ -82,21 +82,21 @@ func (walletAPI *WalletAPI) WalletSetDefault(_ context.Context, addr address.Add
 
 // WalletNewAddress generates a new walletModule address
 func (walletAPI *WalletAPI) WalletNewAddress(protocol address.Protocol) (address.Address, error) {
-	return wallet.NewAddress(walletAPI.walletModule.Wallet, protocol)
+	return walletAPI.walletModule.Wallet.NewAddress(protocol)
 }
 
 // WalletImport adds a given set of KeyInfos to the walletModule
 func (walletAPI *WalletAPI) WalletImport(key *crypto.KeyInfo) (address.Address, error) {
-	addrs, err := walletAPI.walletModule.Wallet.Import(key)
+	addr, err := walletAPI.walletModule.Wallet.Import(key)
 	if err != nil {
 		return address.Undef, err
 	}
-	return addrs[0], nil
+	return addr, nil
 }
 
 // WalletExport returns the KeyInfos for the given walletModule addresses
-func (walletAPI *WalletAPI) WalletExport(addrs []address.Address) ([]*crypto.KeyInfo, error) {
-	return walletAPI.walletModule.Wallet.Export(addrs)
+func (walletAPI *WalletAPI) WalletExport(addr address.Address, password string) (*crypto.KeyInfo, error) {
+	return walletAPI.walletModule.Wallet.Export(addr, password)
 }
 
 func (walletAPI *WalletAPI) WalletSign(ctx context.Context, k address.Address, msg []byte, _ wallet.MsgMeta) (*crypto.Signature, error) {
@@ -132,6 +132,18 @@ func (walletAPI *WalletAPI) WalletSignMessage(ctx context.Context, k address.Add
 	}, nil
 }
 
-func (walletAPI *WalletAPI) Password(ctx context.Context) string {
-	return walletAPI.walletModule.Wallet.Password(ctx)
+func (walletAPI *WalletAPI) IsLocked(ctx context.Context) bool {
+	return walletAPI.walletModule.Wallet.IsLocked()
+}
+
+func (walletAPI *WalletAPI) Locked(ctx context.Context, password string) error {
+	return walletAPI.walletModule.Wallet.Locked(password)
+}
+
+func (walletAPI *WalletAPI) UnLocked(ctx context.Context, password string) error {
+	return walletAPI.walletModule.Wallet.UnLocked(password)
+}
+
+func (walletAPI *WalletAPI) UnLockedList(ctx context.Context) ([]address.Address, error) {
+	return walletAPI.walletModule.Wallet.UnLockedList()
 }

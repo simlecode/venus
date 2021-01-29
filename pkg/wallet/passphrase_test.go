@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/filecoin-project/venus/pkg/config"
-	"github.com/filecoin-project/venus/pkg/constants"
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
 )
 
@@ -24,7 +23,10 @@ func TestEncrypKeyAndDecryptKey(t *testing.T) {
 	fs, err := NewDSBackend(ds, config.DefaultPassphraseConfig())
 	assert.NoError(t, err)
 
-	w := New(constants.TestPassword, fs)
+	w := New(fs)
+	err = w.UnLocked(TestPassword)
+	assert.NoError(t, err)
+
 	ki, err := w.NewKeyInfo()
 	assert.NoError(t, err)
 
@@ -37,10 +39,10 @@ func TestEncrypKeyAndDecryptKey(t *testing.T) {
 		KeyInfo: ki,
 	}
 
-	b, err := encryptKey(key, constants.TestPassword, config.DefaultPassphraseConfig().ScryptN, config.DefaultPassphraseConfig().ScryptP)
+	b, err := encryptKey(key, TestPassword, config.DefaultPassphraseConfig().ScryptN, config.DefaultPassphraseConfig().ScryptP)
 	assert.NoError(t, err)
 
-	key2, err := decryptKey(b, constants.TestPassword)
+	key2, err := decryptKey(b, TestPassword)
 	assert.NoError(t, err)
 
 	assert.Equal(t, key, key2)

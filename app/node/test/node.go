@@ -69,8 +69,10 @@ func (cs *ChainSeed) GiveKey(t *testing.T, nd *node.Node, key int) address.Addre
 	require.Len(t, bcks, 1, "expected to get exactly one datastore backend")
 
 	dsb := bcks[0].(*wallet.DSBackend)
+	err := dsb.UnLocked(wallet.TestPassword)
+	require.NoError(t, err)
 	kinfo := cs.info.Keys[key]
-	require.NoError(t, dsb.ImportKey(kinfo, constants.TestPassword))
+	require.NoError(t, dsb.ImportKey(kinfo))
 
 	addr, err := kinfo.Address()
 	require.NoError(t, err)

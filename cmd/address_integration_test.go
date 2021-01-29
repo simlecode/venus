@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -17,9 +16,9 @@ import (
 	"github.com/filecoin-project/venus/app/node/test"
 	"github.com/filecoin-project/venus/cmd"
 	"github.com/filecoin-project/venus/fixtures/fortest"
-	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	tf "github.com/filecoin-project/venus/pkg/testhelpers/testflags"
+	"github.com/filecoin-project/venus/pkg/wallet"
 )
 
 func TestAddressNewAndList(t *testing.T) {
@@ -54,6 +53,8 @@ func TestWalletBalance(t *testing.T) {
 
 	n, cmdClient, done := builder.BuildAndStartAPI(ctx)
 	defer done()
+	err := n.Wallet().API().UnLocked(ctx, wallet.TestPassword)
+	require.NoError(t, err)
 	addr, err := n.Wallet().API().WalletNewAddress(address.SECP256K1)
 	require.NoError(t, err)
 
@@ -80,8 +81,11 @@ func TestWalletLoadFromFile(t *testing.T) {
 	cs := test.FixtureChainSeed(t)
 	builder.WithGenesisInit(cs.GenesisInitFunc)
 
-	_, cmdClient, done := builder.BuildAndStartAPI(ctx)
+	n, cmdClient, done := builder.BuildAndStartAPI(ctx)
 	defer done()
+
+	err := n.Wallet().API().UnLocked(ctx, wallet.TestPassword)
+	require.NoError(t, err)
 
 	for _, p := range fortest.KeyFilePaths() {
 		cmdClient.RunSuccess(ctx, "wallet", "import", p)
@@ -107,6 +111,9 @@ func TestWalletExportImportRoundTrip(t *testing.T) {
 	n, cmdClient, done := builder.BuildAndStartAPI(ctx)
 	defer done()
 
+	err := n.Wallet().API().UnLocked(ctx, wallet.TestPassword)
+	require.NoError(t, err)
+
 	addr, err := n.Wallet().API().WalletNewAddress(address.SECP256K1)
 	require.NoError(t, err)
 
@@ -119,7 +126,7 @@ func TestWalletExportImportRoundTrip(t *testing.T) {
 	resultAddr := strings.Split(result[1], " ")[0]
 	require.Equal(t, addr.String(), resultAddr)
 
-	exportJSON := cmdClient.RunSuccess(ctx, "wallet", "export", resultAddr, os.Stdin.Name(), fmt.Sprintf("--%s=%s", constants.TestPassword, constants.TestPassword)).ReadStdoutTrimNewlines()
+	exportJSON := cmdClient.RunSuccess(ctx, "wallet", "export", resultAddr, wallet.TestPassword).ReadStdoutTrimNewlines()
 	data, err := hex.DecodeString(exportJSON)
 	require.NoError(t, err)
 	var exportResult crypto.KeyInfo
